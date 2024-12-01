@@ -78,7 +78,18 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
             const SizedBox(
               height: 30,
             ),
-            Image.asset("assets/logo.png"),
+            const Center(
+                child: Text(
+              'Mundo\nTlaxcala',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Courgette',
+                fontSize: 50,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF0097b2),
+              ),
+            ),
+              ),
             const SizedBox(
               height: 20,
             ),

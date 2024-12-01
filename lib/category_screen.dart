@@ -55,7 +55,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
               .sort((a, b) => a.eventDate.compareTo(b.eventDate));
           break;
         case 'Municipality':
-          _filteredBusinesses.sort((a, b) => a.address.compareTo(b.address));
+          _filteredBusinesses.sort((a, b) => a.municipal.compareTo(b.municipal));
           break;
         case 'Alphabetical':
           _filteredBusinesses.sort((a, b) => a.name.compareTo(b.name));
@@ -81,7 +81,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.businessType} - ${widget.category}'),
+        title: Text("${context.tr(widget.businessType)}-${context.tr(widget.category)}"),
         actions: [
           IconButton(
             icon: const Icon(Icons.sort),
@@ -178,7 +178,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                               children: [
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${context.tr('Completion Date')}: ${business.eventDate}',
+                                  '${context.tr('Date')}: ${business.eventDate}',
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 4),
@@ -235,7 +235,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 },
               ),
               RadioListTile(
-                title: Text(context.tr('Address')),
+                title: Text(context.tr('Municipal')),
                 value: 'Municipality',
                 groupValue: _sortCriterion,
                 onChanged: (value) {

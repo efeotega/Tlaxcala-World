@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class LanguageSelectorWidget extends StatefulWidget {
+  const LanguageSelectorWidget({super.key});
+
   @override
   _LanguageSelectorWidgetState createState() => _LanguageSelectorWidgetState();
 }
@@ -32,14 +34,14 @@ class _LanguageSelectorWidgetState extends State<LanguageSelectorWidget> {
             RadioListTile<String>(
               value: 'en',
               groupValue: _selectedLanguage,
-              title: Text('English'),
+              title: const Text('English'),
               onChanged: (value) => _changeLanguage(value!),
             ),
             const SizedBox(width:10),
             RadioListTile<String>(
               value: 'es',
               groupValue: _selectedLanguage,
-              title: Text('Español'),
+              title: const Text('Español'),
               onChanged: (value) => _changeLanguage(value!),
             ),
             const SizedBox(height: 16),

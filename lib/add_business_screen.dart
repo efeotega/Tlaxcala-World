@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
@@ -22,6 +23,9 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   final _reviewController = TextEditingController();
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
+  final _municipalController = TextEditingController();
+  final _facebookPageController = TextEditingController();
+  final _webPageController = TextEditingController();
   final _servicesController = TextEditingController();
   final _addedValueController = TextEditingController();
   final _opinionsController = TextEditingController();
@@ -31,155 +35,268 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   final _eventDateController = TextEditingController();
   final _openingHoursController = TextEditingController();
   final _pricesController = TextEditingController();
+  final _closingHoursController = TextEditingController();
+
   bool isLoading = false;
+  bool _isOpen = false;
   String? _selectedBusinessType;
-String? _selectedCategory;
+  String? _selectedCategory;
 
-void _addNewItem(BuildContext context, String itemType) {
-  final TextEditingController controller = TextEditingController();
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(context.tr('Add New')+itemType),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: context.tr('Enter')+itemType),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(context.tr('Cancel')),
+  void _addNewItem(BuildContext context, String itemType) {
+    final TextEditingController controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(context.tr('Add New') + itemType),
+          content: TextField(
+            controller: controller,
+            decoration:
+                InputDecoration(hintText: context.tr('Enter') + itemType),
           ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                setState(() {
-                  if (itemType == 'Business Type') {
-                    businessCategories[controller.text] = [];
-                    _selectedBusinessType = controller.text;
-                  } else if (itemType == 'Category' &&
-                      _selectedBusinessType != null) {
-                    businessCategories[_selectedBusinessType]!
-                        .add(controller.text);
-                    _selectedCategory = controller.text;
-                  }
-                });
-                Navigator.of(context).pop();
-              }
-            },
-            child: Text('Add'),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-Widget buildBusinessTypeDropdown(BuildContext context) {
-  return Row(
-    children: [
-      Expanded(
-        child: DropdownButtonFormField<String>(
-          value: _selectedBusinessType,
-          decoration: InputDecoration(labelText: context.tr('Type of Business')),
-          items: businessCategories.keys
-              .map(
-                (type) => DropdownMenuItem(
-                  value: type,
-                  child: Text(context.tr(type)), // Use context.tr for translation
-                ),
-              )
-              .toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedBusinessType = value;
-              _selectedCategory = null; // Reset category when business type changes
-            });
-          },
-        ),
-      ),
-      IconButton(
-        icon: Icon(Icons.add, size: 30),
-        onPressed: () => _addNewItem(context, 'Business Type'),
-      ),
-    ],
-  );
-}
-
-Widget buildCategoryDropdown(BuildContext context) {
-  return _selectedBusinessType != null
-      ? Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: InputDecoration(labelText: context.tr('Category')),
-                items: businessCategories[_selectedBusinessType]!
-                    .map(
-                      (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(context.tr(category)), // Use context.tr for translation
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                },
-              ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(context.tr('Cancel')),
             ),
-            IconButton(
-              icon: Icon(Icons.add, size: 30),
-              onPressed: () => _addNewItem(context, 'Category'),
+            TextButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  setState(() {
+                    if (itemType == 'Business Type') {
+                      businessCategories[controller.text] = [];
+                      _selectedBusinessType = controller.text;
+                    } else if (itemType == 'Category' &&
+                        _selectedBusinessType != null) {
+                      businessCategories[_selectedBusinessType]!
+                          .add(controller.text);
+                      _selectedCategory = controller.text;
+                    }
+                  });
+                  Navigator.of(context).pop();
+                }
+              },
+              child: const Text('Add'),
             ),
           ],
-        )
-      : const SizedBox(); // Use const for better performance
-}
+        );
+      },
+    );
+  }
+
+  Widget _buildStarRating(String review) {
+    int rating = int.tryParse(review) ??
+        0; // Assuming review is stored as a number of stars (1-5)
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      children: List.generate(5, (index) {
+        return IconButton(
+          icon: Icon(
+            index < rating ? Icons.star : Icons.star_border,
+            color: Colors.yellow,
+          ),
+          onPressed: () {
+            setState(() {
+              rating = index + 1;
+              _reviewController.text = rating.toString();
+            });
+          },
+        );
+      }),
+    );
+  }
+
+  Future<bool> _isPortrait(String imagePath) async {
+    final completer = Completer<ImageInfo>();
+    final image = Image.file(File(imagePath));
+
+    final ImageStream stream = image.image.resolve(const ImageConfiguration());
+    final listener = ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(info);
+    });
+
+    stream.addListener(listener);
+
+    final ImageInfo imageInfo = await completer.future;
+    stream.removeListener(listener);
+
+    return imageInfo.image.width < imageInfo.image.height;
+  }
+
+  Future<List<Widget>> _buildImageWidgets(
+      BuildContext context, List<String> _imagePaths) async {
+    List<String> imagePaths = _imagePaths;
+    List<Widget> widgets = [];
+
+    for (String path in imagePaths) {
+      bool isPortrait = await _isPortrait(path);
+      widgets.add(
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FullScreenImagePage(imagePath: path),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.file(
+                File(path),
+                width: isPortrait ? 100 : 150,
+                height: isPortrait ? 150 : 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  Widget buildBusinessTypeDropdown(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: _selectedBusinessType,
+            decoration:
+                InputDecoration(labelText: context.tr('Type of Business')),
+            items: businessCategories.keys
+                .map(
+                  (type) => DropdownMenuItem(
+                    value: type,
+                    child: Text(
+                        context.tr(type)), // Use context.tr for translation
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedBusinessType = value;
+                _selectedCategory =
+                    null; // Reset category when business type changes
+              });
+            },
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add, size: 30),
+          onPressed: () => _addNewItem(context, 'Business Type'),
+        ),
+      ],
+    );
+  }
+
+  Widget buildCategoryDropdown(BuildContext context) {
+    return _selectedBusinessType != null
+        ? Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration:
+                      InputDecoration(labelText: context.tr('Category')),
+                  items: businessCategories[_selectedBusinessType]!
+                      .map(
+                        (category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(context
+                              .tr(category)), // Use context.tr for translation
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add, size: 30),
+                onPressed: () => _addNewItem(context, 'Category'),
+              ),
+            ],
+          )
+        : const SizedBox(); // Use const for better performance
+  }
 
   final List<String> _imagePaths = []; // Store multiple image paths
-Future<void> _selectTime(BuildContext context) async {
-  final TimeOfDay? pickedTime = await showTimePicker(
-    context: context,
-    initialTime: TimeOfDay.now(),
-  );
+  Future<void> _selectTime(BuildContext context) async {
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
 
-  if (pickedTime != null) {
-    // Format the selected time as HH:mm
-    final formattedTime = pickedTime.format(context);
-    _openingHoursController.text = formattedTime; // Set the formatted time to the controller
+    if (pickedTime != null) {
+      // Format the selected time as HH:mm
+      final formattedTime = pickedTime.format(context);
+      _openingHoursController.text =
+          formattedTime; // Set the formatted time to the controller
+    }
   }
-}
+  Future<void> _selectClosingTime(BuildContext context) async {
+    final TimeOfDay? pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
 
-Widget buildOpeningHoursField(BuildContext context) {
-  return TextFormField(
-    controller: _openingHoursController,
-    readOnly: true, // Prevent manual text entry
-    decoration: InputDecoration(
-      labelText: context.tr('Opening Hours'),
-    ),
-    onTap: () => _selectTime(context), // Show time picker on tap
-  );
-}
-  Future<void> _pickImage() async {
-    if (_imagePaths.length >= 3) {
+    if (pickedTime != null) {
+      // Format the selected time as HH:mm
+      final formattedTime = pickedTime.format(context);
+      _closingHoursController.text =
+          formattedTime; // Set the formatted time to the controller
+    }
+  }
+
+  Widget buildOpeningHoursField(BuildContext context) {
+    return TextFormField(
+      controller: _openingHoursController,
+      readOnly: true, // Prevent manual text entry
+      decoration: InputDecoration(
+        labelText: context.tr('Opening Hours'),
+      ),
+      onTap: () => _selectTime(context), // Show time picker on tap
+    );
+  }
+
+  Widget buildClosingHoursField(BuildContext context) {
+    return TextFormField(
+      controller: _closingHoursController,
+      readOnly: true, // Prevent manual text entry
+      decoration: InputDecoration(
+        labelText: context.tr('Closing Hours'),
+      ),
+      onTap: () => _selectClosingTime(context), // Show time picker on tap
+    );
+  }
+
+  Future<void> _pickImages() async {
+    if (_imagePaths.length >= 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('You can only select up to 3 images'),
+          content: Text('You can only select up to 10 images'),
         ),
       );
       return;
     }
 
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFiles = await picker.pickMultiImage(); // Pick multiple images
 
-    if (pickedFile != null) {
+    if (pickedFiles != null) {
       setState(() {
-        _imagePaths.add(pickedFile.path); // Add the image path to the list
-       
+        // Add all selected images to the list
+        for (var pickedFile in pickedFiles) {
+          if (_imagePaths.length < 10) {
+            _imagePaths.add(pickedFile.path);
+          }
+        }
       });
     }
   }
@@ -189,7 +306,6 @@ Widget buildOpeningHoursField(BuildContext context) {
       _imagePaths.removeAt(index); // Remove an image from the list
     });
   }
-
 
   Map<String, List<String>> businessCategories = {
     'Cinema': ['Billboards', 'Cinemas'],
@@ -254,12 +370,10 @@ Widget buildOpeningHoursField(BuildContext context) {
                     ? context.tr('Please enter a business name')
                     : null,
               ),
-                buildBusinessTypeDropdown(context),
-      buildCategoryDropdown(context),
-              TextFormField(
-                controller: _reviewController,
-                decoration: InputDecoration(labelText: context.tr('Review')),
-              ),
+              buildBusinessTypeDropdown(context),
+              buildCategoryDropdown(context),
+              Text(context.tr('Review (Stars)')),
+              _buildStarRating(_reviewController.text),
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
@@ -269,6 +383,10 @@ Widget buildOpeningHoursField(BuildContext context) {
               TextFormField(
                 controller: _addressController,
                 decoration: InputDecoration(labelText: context.tr('Address')),
+              ),
+              TextFormField(
+                controller: _municipalController,
+                decoration: InputDecoration(labelText: context.tr('Municipal')),
               ),
               TextFormField(
                 controller: _servicesController,
@@ -285,9 +403,16 @@ Widget buildOpeningHoursField(BuildContext context) {
                 decoration: InputDecoration(labelText: context.tr('Opinions')),
               ),
               TextFormField(
-                controller: _whatsappController,
-                keyboardType: TextInputType.phone,
-                decoration: InputDecoration(labelText: context.tr('WhatsApp')),
+                controller: _facebookPageController,
+                keyboardType: TextInputType.url,
+                decoration: InputDecoration(
+                    labelText: context.tr('Facebook Page Link')),
+              ),
+              TextFormField(
+                controller: _webPageController,
+                keyboardType: TextInputType.url,
+                decoration:
+                    InputDecoration(labelText: context.tr('Web Page Link')),
               ),
               TextFormField(
                 controller: _promotionsController,
@@ -300,82 +425,120 @@ Widget buildOpeningHoursField(BuildContext context) {
                 decoration:
                     InputDecoration(labelText: context.tr('Location Link')),
               ),
+              // Row(
+              //   mainAxisAlignment: MainAxisAlignment.start,
+              //   children: [
+              //     Text(context.tr('Schedule:')),
+              //     const SizedBox(
+              //       width: 10,
+              //     ),
+              //     Switch(
+              //       value: _isOpen,
+              //       onChanged: (value) {
+              //         setState(() {
+              //           _isOpen = value;
+              //         });
+              //       },
+              //     ),
+              //     Text(_isOpen ? context.tr('Open') : context.tr('Closed')),
+              //   ],
+              // ),
               TextFormField(
                 controller: _eventDateController,
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                     labelText: context.tr('Date of Your Event')),
               ),
-              buildOpeningHoursField(context),
+                buildOpeningHoursField(context),
+                buildClosingHoursField(context),
+              // buildOpeningHoursField(context),
               TextFormField(
                 controller: _pricesController,
                 decoration: InputDecoration(labelText: context.tr('Prices')),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _pickImage,
-                child: Text(context.tr('Pick Image')),
+                onPressed: _pickImages,
+                child: Text(context.tr('Pick Images')),
               ),
-              const SizedBox(height: 20,),
-              if(_imagePaths.isNotEmpty)
-                GestureDetector(
-                  onTap: () {
-                    
+              const SizedBox(
+                height: 20,
+              ),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: FutureBuilder<List<Widget>>(
+                  future: _buildImageWidgets(context, _imagePaths),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return const Text('Error loading images');
+                    } else {
+                      return Wrap(
+                        spacing: 8.0,
+                        runSpacing: 8.0,
+                        children: snapshot.data ?? [],
+                      );
+                    }
                   },
-                  child:  SizedBox(
-                    height: 120,
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
-              itemCount: _imagePaths.length,
-              itemBuilder: (context, index) {
-                return Stack(
-                  children: [
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: (){
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    FullScreenImagePage(imagePath: _imagePaths[index]),
-                              ),
-                            );
-                        },
-                        child: Image.file(
-                          File(_imagePaths[index]),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 5,
-                      right: 5,
-                      child: GestureDetector(
-                        onTap: () => _removeImage(index),
-                        child: const CircleAvatar(
-                          radius: 15,
-                          backgroundColor: Colors.red,
-                          child: Icon(Icons.close, color: Colors.white, size: 15),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
                 ),
+              ),
+              // Wrap(
+              //   spacing: 8,
+              //   children: [
+              //     for (var imagePath in _imagePaths)
+              //       Stack(
+              //         children: [
+              //           GestureDetector(
+              //             onTap: () {
+              //               // Navigate to full-screen view when image is tapped
+              //               Navigator.push(
+              //                 context,
+              //                 MaterialPageRoute(
+              //                   builder: (context) =>
+              //                       FullScreenImagePage(imagePath: imagePath),
+              //                 ),
+              //               );
+              //             },
+              //             child: Padding(
+              //               padding: const EdgeInsets.all(5.0),
+              //               child: Image.file(
+              //                 File(imagePath),
+              //                 width: 120,
+              //                 height: 120,
+              //                 fit: BoxFit.cover,
+              //               ),
+              //             ),
+              //           ),
+              //           Positioned(
+              //             top: 5,
+              //             right: 5,
+              //             child: GestureDetector(
+              //               onTap: () {
+              //                 // Remove image from the list on delete icon tap
+              //                 setState(() {
+              //                   _imagePaths.remove(imagePath);
+              //                 });
+              //               },
+              //               child: Icon(
+              //                 Icons.delete,
+              //                 color: Colors.red,
+              //                 size: 24,
+              //               ),
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //   ],
+              // ),
+
               const SizedBox(height: 30),
               Center(
                 child: ElevatedButton(
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       setState(() {
-                        isLoading=true;
+                        isLoading = true;
                       });
                       // Save business to database
                       await DatabaseHelper().addBusiness(
@@ -383,9 +546,12 @@ Widget buildOpeningHoursField(BuildContext context) {
                           imagePaths: _imagePaths.join(","),
                           name: _nameController.text.trim(),
                           businessType: _selectedBusinessType!.trim(),
+                          facebookPage: _facebookPageController.text.trim(),
+                          website: _webPageController.text.trim(),
                           category: _selectedCategory!.trim(),
                           review: _reviewController.text.trim(),
                           phone: _phoneController.text.trim(),
+                          municipal:_municipalController.text.trim(),
                           address: _addressController.text.trim(),
                           services: _servicesController.text.trim(),
                           addedValue: _addedValueController.text.trim(),
@@ -395,6 +561,7 @@ Widget buildOpeningHoursField(BuildContext context) {
                           locationLink: _locationLinkController.text.trim(),
                           eventDate: _eventDateController.text.trim(),
                           openingHours: _openingHoursController.text.trim(),
+                          closingHours: _closingHoursController.text.trim(),
                           prices: _pricesController.text.trim(),
                         ),
                       );

@@ -31,7 +31,8 @@ class BusinessDetailsScreen extends StatelessWidget {
             Image.network(imagePath, height: 200, fit: BoxFit.cover),
 
             // Business Name and Type
-            Padding(
+            Center(child:
+             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
                 business.name,
@@ -39,6 +40,8 @@ class BusinessDetailsScreen extends StatelessWidget {
                     const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
             ),
+            ),
+           
             _detailRow('Type:', business.businessType),
             _detailRow('Category:', business.category),
 

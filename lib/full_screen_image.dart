@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 
 class FullScreenImagePage extends StatelessWidget {
@@ -13,7 +14,7 @@ class FullScreenImagePage extends StatelessWidget {
       backgroundColor: Colors.black, // Dark background for better viewing
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Image Preview'),
+        title:  Text(context.tr('Image Preview')),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () {

@@ -66,6 +66,7 @@ class DatabaseHelper {
       imagePaths TEXT,
       phone TEXT,
       address TEXT,
+      municipal TEXT,
       services TEXT,
       addedValue TEXT,
       opinions TEXT,
@@ -75,7 +76,10 @@ class DatabaseHelper {
       locationLink TEXT,
       eventDate TEXT,
       openingHours TEXT,
-      prices TEXT
+      closingHours TEXT,
+      prices TEXT,
+      facebookPage TEXT,
+      website TEXT
     )
       ''');
       },
@@ -142,8 +146,10 @@ class DatabaseHelper {
       businessType TEXT,
       category TEXT,
       review TEXT,
+      imagePaths TEXT,
       phone TEXT,
       address TEXT,
+      municipal TEXT,
       services TEXT,
       addedValue TEXT,
       opinions TEXT,
@@ -153,7 +159,10 @@ class DatabaseHelper {
       locationLink TEXT,
       eventDate TEXT,
       openingHours TEXT,
-      prices TEXT
+      closingHours TEXT,
+      prices TEXT,
+      facebookPage TEXT,
+      website TEXT
     )
   ''');
   }

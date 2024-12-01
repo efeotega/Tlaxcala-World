@@ -1,6 +1,5 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
-import 'package:tlaxcala_world/language_selector_widget.dart';
 import 'database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,7 +25,7 @@ class _LoginScreenState extends State<LoginScreen> {
     await prefs.setBool('rememberMe', rememberMe);
   }
 
-  String _selectedLanguage = 'en'; // Default to English
+  String _selectedLanguage = 'fr';
 
   void _changeLanguage(String languageCode) {
     setState(() {
@@ -102,15 +101,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 30,
                 ),
 
-                Image.asset("assets/logo.png"),
+                const Center(
+                  child: Text(
+                    'Mundo\nTlaxcala',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Courgette',
+                      fontSize: 50,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0097b2),
+                    ),
+                  ),
+                ),
 
                 const SizedBox(
                   height: 20,
                 ),
-                Text(
-                  context.tr('Login'),
-                  style: const TextStyle(fontSize: 35),
-                ),
+                // Text(
+                //   context.tr('Login'),
+                //   style: const TextStyle(fontSize: 35),
+                // ),
 
                 const SizedBox(height: 30),
                 // Username Input

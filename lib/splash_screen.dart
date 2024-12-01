@@ -8,29 +8,26 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Navigate to the Home Page after 3 seconds
     Timer(const Duration(seconds: 3), () {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacementNamed(context, '/welcome');
     });
 
-    return Scaffold(
-      backgroundColor: Colors.white, // Adjust the background color if needed
+    return const Scaffold(
+      backgroundColor: Color(0xFF0097b2), // Adjust the background color if needed
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // App Logo
-            Image.asset(
-              'assets/logo.png', // Replace with your logo path
-              width: 150,
-              height: 150,
-            ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
             // App Name
-            const Text(
-              'Mundo Tlaxcala',
+            Text(
+              'Mundo\nTlaxcala',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 24,
+                fontFamily: 'Courgette',
+                fontSize: 50,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Colors.white,
               ),
             ),
           ],

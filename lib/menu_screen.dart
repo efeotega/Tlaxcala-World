@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'database_helper.dart';
-import 'business_model.dart';
 import 'category_screen.dart'; // Import your CategoryScreen
 
 class MenuScreen extends StatefulWidget {
@@ -13,8 +12,10 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   List<String> _businessTypes = [];
-  Map<String, List<String>> _categoriesByType = {};
+  final Map<String, List<String>> _categoriesByType = {};
   String? _expandedBusinessType;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -28,7 +29,6 @@ class _MenuScreenState extends State<MenuScreen> {
       _businessTypes = businessTypes;
     });
 
-    // Load categories for each business type
     for (String type in businessTypes) {
       final categories = await DatabaseHelper().getCategoriesForType(type);
       setState(() {
@@ -48,46 +48,81 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredBusinessTypes = _businessTypes.where((type) {
+      return type.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          (_categoriesByType[type]?.any((category) => 
+              category.toLowerCase().contains(_searchQuery.toLowerCase())) ?? false);
+    }).toList();
+
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('Business Menu')),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView.builder(
-          itemCount: _businessTypes.length,
-          itemBuilder: (context, index) {
-            final businessType = _businessTypes[index];
-            final categories = _categoriesByType[businessType] ?? [];
-
-            return Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              elevation: 4,
-              margin: const EdgeInsets.symmetric(vertical: 10),
-              child: ExpansionTile(
-                key: PageStorageKey(businessType),
-                title: Text(
-                  businessType,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                labelText: context.tr('Search'),
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                initiallyExpanded: _expandedBusinessType == businessType,
-                onExpansionChanged: (expanded) {
-                  setState(() {
-                    _expandedBusinessType = expanded ? businessType : null;
-                  });
-                },
-                children: categories.map((category) {
-                  return ListTile(
-                    title: Text(category),
-                    onTap: () => _navigateToCategoryScreen(businessType, category),
-                  );
-                }).toList(),
               ),
-            );
-          },
-        ),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: filteredBusinessTypes.length,
+              itemBuilder: (context, index) {
+                final businessType = filteredBusinessTypes[index];
+                final categories = _categoriesByType[businessType] ?? [];
+
+                return Padding(
+                  padding: const EdgeInsets.only(left:16.0,right:16),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                    ),
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    child: ExpansionTile(
+                      key: PageStorageKey(businessType),
+                      title: Text(
+                        context.tr(businessType),
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      initiallyExpanded: _expandedBusinessType == businessType,
+                      onExpansionChanged: (expanded) {
+                        setState(() {
+                          _expandedBusinessType = expanded ? businessType : null;
+                        });
+                      },
+                      children: categories
+                          .where((category) => category.toLowerCase().contains(_searchQuery.toLowerCase()))
+                          .map((category) {
+                        return ListTile(
+                          title: Text(context.tr(category)),
+                          onTap: () => _navigateToCategoryScreen(businessType, category),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
