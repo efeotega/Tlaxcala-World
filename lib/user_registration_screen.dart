@@ -93,13 +93,13 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
             const SizedBox(
               height: 20,
             ),
-            Text(
-              context.tr('User Registration'),
-              style: Theme.of(context).textTheme.headlineLarge,
-            ),
-            const SizedBox(
-              height: 20,
-            ),
+            // Text(
+            //   context.tr('User Registration'),
+            //   style: Theme.of(context).textTheme.headlineLarge,
+            // ),
+            // const SizedBox(
+            //   height: 20,
+            // ),
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
