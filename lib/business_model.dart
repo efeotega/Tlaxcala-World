@@ -1,5 +1,5 @@
 class Business {
-  final int? id;
+  final String id;
   final String name;
   final String businessType;
   final String category;
@@ -19,10 +19,10 @@ class Business {
   final String openingHours;
   final String closingHours;
   final String prices;
-  final String imagePaths;
+  final List<dynamic> imagePaths;
 
   Business({
-    this.id,
+    required this.id,
     required this.name,
     required this.municipal,
     required this.businessType,
@@ -75,7 +75,7 @@ class Business {
   /// Creates a `Business` object from a `Map`.
   factory Business.fromMap(Map<String, dynamic> map) {
     return Business(
-      id: map['id'] as int?,
+      id: map['id'] ?? '',
       name: map['name'] ?? '',
       municipal:map['municipal'],
       businessType: map['businessType'] ?? '',
@@ -101,7 +101,7 @@ class Business {
 
   /// Creates a copy of the `Business` object with optional modifications.
   Business copyWith({
-    int? id,
+    String? id,
     String? name,
     String? businessType,
     String? category,
@@ -121,7 +121,7 @@ class Business {
     String? openingHours,
     String? closingHours,
     String? prices,
-    String? imagePaths,
+    List<dynamic>? imagePaths,
   }) {
     return Business(
       id: id ?? this.id,

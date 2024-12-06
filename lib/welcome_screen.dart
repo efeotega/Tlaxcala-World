@@ -63,7 +63,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               padding: EdgeInsets.only(top: 40),
               child: Center(
                 child: Text(
-                  'Mundo\nTlaxcala',
+                  'Encuentra de \nTodo \nTlaxcala',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Courgette',

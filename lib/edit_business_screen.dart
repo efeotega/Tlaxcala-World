@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:tlaxcala_world/full_screen_image.dart';
@@ -34,9 +38,9 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
   String? _selectedBusinessType;
   String? _selectedCategory;
   late TextEditingController _websiteController;
+  List<String> _imagePaths = []; // For mobile
+  final List<Uint8List> _imageBytes = []; // For web
   late TextEditingController _municipalController;
-
-  late List<String> _imagePaths;
 
   @override
   void initState() {
@@ -50,7 +54,8 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     _closingHoursController =
         TextEditingController(text: widget.business.closingHours);
     _addressController = TextEditingController(text: widget.business.address);
-     _municipalController = TextEditingController(text: widget.business.municipal);
+    _municipalController =
+        TextEditingController(text: widget.business.municipal);
     _locationLinkController =
         TextEditingController(text: widget.business.locationLink);
     _servicesController = TextEditingController(text: widget.business.services);
@@ -67,10 +72,11 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     _selectedCategory = widget.business.category;
 
     // Split the imagePaths string into a list of file paths
-    _imagePaths = widget.business.imagePaths.split(',');
+    _imagePaths = widget.business.imagePaths.cast<String>();
 
     // Check the opening hours for the Open/Close status
   }
+
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -84,6 +90,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
           formattedTime; // Set the formatted time to the controller
     }
   }
+
   Future<void> _selectClosingTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -121,47 +128,74 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
   }
 
   Future<void> _saveBusiness() async {
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+    // Create the updated business object
     final updatedBusiness = widget.business.copyWith(
-        name: _nameController.text,
-        review: _reviewController.text,
-        eventDate: _eventDateController.text,
-        openingHours: _openingHoursController.text,
-        closingHours: _closingHoursController.text,
-        address: _addressController.text,
-        municipal:_municipalController.text,
-        locationLink: _locationLinkController.text,
-        services: _servicesController.text,
-        promotions: _promotionsController.text,
-        facebookPage: _facebookController.text,
-        website: _websiteController.text,
-        imagePaths: _imagePaths
-            .join(','), // Join the image paths back into a single string
-        phone: _phoneNumberController.text,
-        addedValue: _addedValueController.text,
-        opinions: _opinionController.text);
-
-    await DatabaseHelper().updateBusiness(updatedBusiness);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.tr('Business Updated'))),
+      name: _nameController.text.trim(),
+      review: _reviewController.text.trim(),
+      eventDate: _eventDateController.text.trim(),
+      openingHours: _openingHoursController.text.trim(),
+      closingHours: _closingHoursController.text.trim(),
+      address: _addressController.text.trim(),
+      municipal: _municipalController.text.trim(),
+      locationLink: _locationLinkController.text.trim(),
+      services: _servicesController.text.trim(),
+      promotions: _promotionsController.text.trim(),
+      facebookPage: _facebookController.text.trim(),
+      website: _websiteController.text.trim(),
+      imagePaths: kIsWeb ? _imageBytes : _imagePaths, // Join the image paths
+      phone: _phoneNumberController.text.trim(),
+      addedValue: _addedValueController.text.trim(),
+      opinions: _opinionController.text.trim(),
     );
-    Navigator.pushReplacementNamed(
-        context, '/deleteBusiness'); // Return to previous screen after saving
-  }
 
-  Future<void> _pickImages() async {
-    final ImagePicker _picker = ImagePicker();
-    final List<XFile>? pickedImages = await _picker.pickMultiImage();
-    if (pickedImages != null) {
-      setState(() {
-        _imagePaths = pickedImages.map((e) => e.path).toList();
+    try {
+      // Assume `businessId` or `documentId` is stored in the `Business` object
+      await _firestore.collection('businesses').doc(widget.business.id).update({
+        'name': updatedBusiness.name,
+        'review': updatedBusiness.review,
+        'eventDate': updatedBusiness.eventDate,
+        'openingHours': updatedBusiness.openingHours,
+        'closingHours': updatedBusiness.closingHours,
+        'address': updatedBusiness.address,
+        'municipal': updatedBusiness.municipal,
+        'locationLink': updatedBusiness.locationLink,
+        'services': updatedBusiness.services,
+        'promotions': updatedBusiness.promotions,
+        'facebookPage': updatedBusiness.facebookPage,
+        'website': updatedBusiness.website,
+        'imagePaths': updatedBusiness.imagePaths,
+        'phone': updatedBusiness.phone,
+        'addedValue': updatedBusiness.addedValue,
+        'opinions': updatedBusiness.opinions,
       });
+
+      // Show a success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Business Updated Successfully')),
+      );
+
+      // Navigate to another page after updating
+      Navigator.pushReplacementNamed(context, '/deleteBusiness');
+    } catch (e) {
+      // Handle errors gracefully
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update business: $e')),
+      );
     }
   }
 
   Future<bool> _isPortrait(String imagePath) async {
     final completer = Completer<ImageInfo>();
-    final image = Image.file(File(imagePath));
+    final image = Image.network(
+      imagePath,
+      errorBuilder: (context, error, stackTrace) {
+        return Image.file(
+          File(imagePath),
+        );
+      },
+    );
 
     final ImageStream stream = image.image.resolve(const ImageConfiguration());
     final listener = ImageStreamListener((ImageInfo info, bool _) {
@@ -169,43 +203,108 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     });
 
     stream.addListener(listener);
-
     final ImageInfo imageInfo = await completer.future;
     stream.removeListener(listener);
 
     return imageInfo.image.width < imageInfo.image.height;
   }
 
-  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<String> imagePaths = widget.business.imagePaths.split(",");
-    List<Widget> widgets = [];
+  Future<void> _pickImages() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.image,
+    );
 
-    for (String path in imagePaths) {
-      bool isPortrait = await _isPortrait(path);
-      widgets.add(
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FullScreenImagePage(imagePath: path),
-              ),
-            );
-          },
-          child: Padding(
+    if (result != null) {
+      if (kIsWeb) {
+        // For web, save binary data
+        _imagePaths.clear();
+        for (var file in result.files) {
+          if (file.bytes != null) {
+            _imageBytes.add(file.bytes!);
+          }
+        }
+      } else {
+        // For mobile, save file paths
+        for (var file in result.files) {
+          if (file.path != null) {
+            _imagePaths.add(file.path!);
+          }
+        }
+      }
+      setState(() {});
+    }
+  }
+
+  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
+    List<Widget> widgets = [];
+    if (kIsWeb) {
+      // Build widgets for web images
+      if (_imagePaths.isEmpty) {
+        for (var bytes in _imageBytes) {
+          widgets.add(Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8.0),
-              child: Image.file(
-                File(path),
-                width: isPortrait ? 100 : 150,
-                height: isPortrait ? 150 : 100,
+              child: Image.memory(
+                bytes,
+                width: 100,
+                height: 100,
                 fit: BoxFit.cover,
               ),
             ),
+          ));
+        }
+      }
+      for (var path in _imagePaths) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.network(
+                  path,
+                  width: 100,
+                  height: 100,
+                  errorBuilder: (context, error, stackTrace) {
+                    for (var bytes in _imageBytes) {
+                      return Image.memory(
+                        bytes,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                )),
           ),
-        ),
-      );
+        );
+      }
+    } else {
+      // Build widgets for mobile images
+      for (var path in _imagePaths) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: Image.network(
+                  path,
+                  width: 100,
+                  height: 100,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Image.file(
+                      File(path),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    );
+                  },
+                )),
+          ),
+        );
+      }
     }
     return widgets;
   }
@@ -383,7 +482,17 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               const SizedBox(
                 height: 16,
               ),
-              Text(context.tr('Photos')),
+              Row(
+                children: [
+                  Text(context.tr('Photos')),
+                  Spacer(),
+                  TextButton(
+                      onPressed: () {
+                        _pickImages();
+                      },
+                      child: Text(context.tr('Change Photos')))
+                ],
+              ),
               const SizedBox(
                 height: 20,
               ),
@@ -395,6 +504,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const CircularProgressIndicator();
                     } else if (snapshot.hasError) {
+                      print(snapshot.error);
                       return const Text('Error loading images');
                     } else {
                       return Wrap(
@@ -415,7 +525,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               const SizedBox(height: 16),
               // _buildOpenCloseSwitch(),
               buildOpeningHoursField(context),
-                buildClosingHoursField(context),
+              buildClosingHoursField(context),
               const SizedBox(height: 16),
               _buildTextField(context.tr('Address'), _addressController),
               _buildTextField(context.tr('Municipal'), _municipalController),
@@ -482,5 +592,4 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       }),
     );
   }
-
 }

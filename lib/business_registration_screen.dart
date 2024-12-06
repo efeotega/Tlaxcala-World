@@ -35,6 +35,16 @@ class BusinessRegistrationScreen extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.person),
+              label:  Text(context.tr('View Users')),
+              onPressed: () {
+                // Navigate back to the login screen
+
+                Navigator.pushReplacementNamed(context, '/view-users');
+              },
+            ),
+            const SizedBox(height: 16),
            
             ElevatedButton.icon(
               icon: const Icon(Icons.logout),
@@ -42,9 +52,10 @@ class BusinessRegistrationScreen extends StatelessWidget {
               onPressed: () {
                 // Navigate back to the login screen
 
-                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/login');
               },
             ),
+            
           ],
         ),
       ),

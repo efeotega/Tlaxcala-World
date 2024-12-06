@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "301222612357",
+    "project_id": "mundotlaxcala",
+    "storage_bucket": "mundotlaxcala.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:301222612357:android:b033733e5be413c13548ec",
+        "android_client_info": {
+          "package_name": "com.andreslopez.mundotlaxcala"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "301222612357-f44alctlbbroqqh9vlam4ls78losmv99.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLi0R2DKHX_8-aZUJm6vn51-wqKmeWXFc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "301222612357-f44alctlbbroqqh9vlam4ls78losmv99.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

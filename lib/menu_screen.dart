@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'database_helper.dart';
@@ -23,19 +24,42 @@ class _MenuScreenState extends State<MenuScreen> {
     _loadBusinessTypes();
   }
 
-  Future<void> _loadBusinessTypes() async {
-    final businessTypes = await DatabaseHelper().getUniqueBusinessTypes();
+Future<void> _loadBusinessTypes() async {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  try {
+    // Fetch unique business types from Firestore
+    final businessTypesSnapshot = await _firestore.collection('businesses').get();
+    final businessTypes = businessTypesSnapshot.docs
+        .map((doc) => doc['businessType'] as String)
+        .toSet()
+        .toList();
+
     setState(() {
       _businessTypes = businessTypes;
     });
 
+    // Fetch categories for each business type
     for (String type in businessTypes) {
-      final categories = await DatabaseHelper().getCategoriesForType(type);
+      final categoriesSnapshot = await _firestore
+          .collection('businesses')
+          .where('businessType', isEqualTo: type)
+          .get();
+
+      final categories = categoriesSnapshot.docs
+          .map((doc) => doc['category'] as String)
+          .toSet()
+          .toList();
+
       setState(() {
         _categoriesByType[type] = categories;
       });
     }
+  } catch (e) {
+    print('Error loading business types and categories: $e');
   }
+}
+
 
   void _navigateToCategoryScreen(String type, String category) {
     Navigator.push(
@@ -56,7 +80,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.tr('Business Menu')),
+        title: Text(context.tr('Select Your Service')),
       ),
       body: Column(
         children: [

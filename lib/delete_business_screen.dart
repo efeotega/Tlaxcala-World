@@ -1,6 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tlaxcala_world/edit_business_screen.dart';
+import 'package:tlaxcala_world/firebase_methods.dart';
 import 'database_helper.dart';
 import 'business_model.dart';
 
@@ -20,16 +22,27 @@ class _DeleteBusinessScreenState extends State<DeleteBusinessScreen> {
     _loadBusinesses();
   }
 
-  // Load businesses from the database
-  void _loadBusinesses() async {
-    final businesses = await DatabaseHelper().getBusinesses();
+Future<void> _loadBusinesses() async {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  try {
+    // Query Firestore for businesses collection
+    QuerySnapshot querySnapshot = await _firestore.collection('businesses').get();
+    // Map Firestore documents to Business objects
     setState(() {
-      _businesses = businesses.map((map) => Business.fromMap(map)).toList();
+      _businesses = querySnapshot.docs.map((doc) {
+        return Business.fromMap(doc.data() as Map<String, dynamic>);
+      }).toList();
     });
+    print("Businesses loaded successfully");
+  } catch (e) {
+    print("Error loading businesses: $e");
   }
+}
+
 
   // Show confirmation dialog before deleting a business
-  void _showDeleteConfirmationDialog(int id) {
+  void _showDeleteConfirmationDialog(String id) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -58,8 +71,8 @@ class _DeleteBusinessScreenState extends State<DeleteBusinessScreen> {
   }
 
   // Delete business from the database
-  void _deleteBusiness(int id) async {
-    await DatabaseHelper().deleteBusiness(id);
+  void _deleteBusiness(String id) async {
+    await deleteBusiness(context, id);
     _loadBusinesses();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(context.tr('Business deleted successfully.'))),

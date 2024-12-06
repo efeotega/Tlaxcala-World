@@ -2,11 +2,15 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:easy_localization/easy_localization.dart';
+import 'dart:typed_data'; // For Uint8List
+import 'dart:io' show File; // For File on mobile
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tlaxcala_world/business_model.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:tlaxcala_world/firebase_methods.dart';
 import 'package:tlaxcala_world/full_screen_image.dart';
-import 'database_helper.dart';
 
 class AddBusinessScreen extends StatefulWidget {
   const AddBusinessScreen({super.key});
@@ -38,9 +42,11 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   final _closingHoursController = TextEditingController();
 
   bool isLoading = false;
-  bool _isOpen = false;
+  final bool _isOpen = false;
   String? _selectedBusinessType;
   String? _selectedCategory;
+  final List<String> _imagePaths = []; // For mobile
+  final List<Uint8List> _imageBytes = []; // For web
 
   void _addNewItem(BuildContext context, String itemType) {
     final TextEditingController controller = TextEditingController();
@@ -106,58 +112,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
     );
   }
 
-  Future<bool> _isPortrait(String imagePath) async {
-    final completer = Completer<ImageInfo>();
-    final image = Image.file(File(imagePath));
-
-    final ImageStream stream = image.image.resolve(const ImageConfiguration());
-    final listener = ImageStreamListener((ImageInfo info, bool _) {
-      completer.complete(info);
-    });
-
-    stream.addListener(listener);
-
-    final ImageInfo imageInfo = await completer.future;
-    stream.removeListener(listener);
-
-    return imageInfo.image.width < imageInfo.image.height;
-  }
-
-  Future<List<Widget>> _buildImageWidgets(
-      BuildContext context, List<String> _imagePaths) async {
-    List<String> imagePaths = _imagePaths;
-    List<Widget> widgets = [];
-
-    for (String path in imagePaths) {
-      bool isPortrait = await _isPortrait(path);
-      widgets.add(
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FullScreenImagePage(imagePath: path),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: Image.file(
-                File(path),
-                width: isPortrait ? 100 : 150,
-                height: isPortrait ? 150 : 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return widgets;
-  }
-
+ 
   Widget buildBusinessTypeDropdown(BuildContext context) {
     return Row(
       children: [
@@ -225,8 +180,73 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
           )
         : const SizedBox(); // Use const for better performance
   }
+Future<void> _pickImages() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: FileType.image,
+    );
 
-  final List<String> _imagePaths = []; // Store multiple image paths
+    if (result != null) {
+      if (kIsWeb) {
+        // For web, save binary data
+        for (var file in result.files) {
+          if (file.bytes != null) {
+            _imageBytes.add(file.bytes!);
+          }
+        }
+      } else {
+        // For mobile, save file paths
+        for (var file in result.files) {
+          if (file.path != null) {
+            _imagePaths.add(file.path!);
+          }
+        }
+      }
+      setState(() {});
+    }
+  }
+
+  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
+    List<Widget> widgets = [];
+    if (kIsWeb) {
+      // Build widgets for web images
+      for (var bytes in _imageBytes) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.memory(
+                bytes,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        );
+      }
+    } else {
+      // Build widgets for mobile images
+      for (var path in _imagePaths) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8.0),
+              child: Image.file(
+                File(path),
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -240,6 +260,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
           formattedTime; // Set the formatted time to the controller
     }
   }
+
   Future<void> _selectClosingTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
@@ -274,31 +295,6 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
       ),
       onTap: () => _selectClosingTime(context), // Show time picker on tap
     );
-  }
-
-  Future<void> _pickImages() async {
-    if (_imagePaths.length >= 10) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You can only select up to 10 images'),
-        ),
-      );
-      return;
-    }
-
-    final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage(); // Pick multiple images
-
-    if (pickedFiles != null) {
-      setState(() {
-        // Add all selected images to the list
-        for (var pickedFile in pickedFiles) {
-          if (_imagePaths.length < 10) {
-            _imagePaths.add(pickedFile.path);
-          }
-        }
-      });
-    }
   }
 
   void _removeImage(int index) {
@@ -350,6 +346,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('Add Business')),
@@ -425,32 +422,15 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                 decoration:
                     InputDecoration(labelText: context.tr('Location Link')),
               ),
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.start,
-              //   children: [
-              //     Text(context.tr('Schedule:')),
-              //     const SizedBox(
-              //       width: 10,
-              //     ),
-              //     Switch(
-              //       value: _isOpen,
-              //       onChanged: (value) {
-              //         setState(() {
-              //           _isOpen = value;
-              //         });
-              //       },
-              //     ),
-              //     Text(_isOpen ? context.tr('Open') : context.tr('Closed')),
-              //   ],
-              // ),
+             
               TextFormField(
                 controller: _eventDateController,
                 keyboardType: TextInputType.text,
                 decoration: InputDecoration(
                     labelText: context.tr('Date of Your Event')),
               ),
-                buildOpeningHoursField(context),
-                buildClosingHoursField(context),
+              buildOpeningHoursField(context),
+              buildClosingHoursField(context),
               // buildOpeningHoursField(context),
               TextFormField(
                 controller: _pricesController,
@@ -467,7 +447,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: FutureBuilder<List<Widget>>(
-                  future: _buildImageWidgets(context, _imagePaths),
+                  future: _buildImageWidgets(context),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const CircularProgressIndicator();
@@ -483,55 +463,6 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                   },
                 ),
               ),
-              // Wrap(
-              //   spacing: 8,
-              //   children: [
-              //     for (var imagePath in _imagePaths)
-              //       Stack(
-              //         children: [
-              //           GestureDetector(
-              //             onTap: () {
-              //               // Navigate to full-screen view when image is tapped
-              //               Navigator.push(
-              //                 context,
-              //                 MaterialPageRoute(
-              //                   builder: (context) =>
-              //                       FullScreenImagePage(imagePath: imagePath),
-              //                 ),
-              //               );
-              //             },
-              //             child: Padding(
-              //               padding: const EdgeInsets.all(5.0),
-              //               child: Image.file(
-              //                 File(imagePath),
-              //                 width: 120,
-              //                 height: 120,
-              //                 fit: BoxFit.cover,
-              //               ),
-              //             ),
-              //           ),
-              //           Positioned(
-              //             top: 5,
-              //             right: 5,
-              //             child: GestureDetector(
-              //               onTap: () {
-              //                 // Remove image from the list on delete icon tap
-              //                 setState(() {
-              //                   _imagePaths.remove(imagePath);
-              //                 });
-              //               },
-              //               child: Icon(
-              //                 Icons.delete,
-              //                 color: Colors.red,
-              //                 size: 24,
-              //               ),
-              //             ),
-              //           ),
-              //         ],
-              //       ),
-              //   ],
-              // ),
-
               const SizedBox(height: 30),
               Center(
                 child: ElevatedButton(
@@ -541,39 +472,32 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                         isLoading = true;
                       });
                       // Save business to database
-                      await DatabaseHelper().addBusiness(
-                        Business(
-                          imagePaths: _imagePaths.join(","),
-                          name: _nameController.text.trim(),
-                          businessType: _selectedBusinessType!.trim(),
-                          facebookPage: _facebookPageController.text.trim(),
-                          website: _webPageController.text.trim(),
-                          category: _selectedCategory!.trim(),
-                          review: _reviewController.text.trim(),
-                          phone: _phoneController.text.trim(),
-                          municipal:_municipalController.text.trim(),
-                          address: _addressController.text.trim(),
-                          services: _servicesController.text.trim(),
-                          addedValue: _addedValueController.text.trim(),
-                          opinions: _opinionsController.text.trim(),
-                          whatsapp: _whatsappController.text.trim(),
-                          promotions: _promotionsController.text.trim(),
-                          locationLink: _locationLinkController.text.trim(),
-                          eventDate: _eventDateController.text.trim(),
-                          openingHours: _openingHoursController.text.trim(),
-                          closingHours: _closingHoursController.text.trim(),
-                          prices: _pricesController.text.trim(),
-                        ),
-                      );
+                      await saveBusinessData(
+                          Business(
+                            id: '',
+                            imagePaths:kIsWeb?_imageBytes: _imagePaths,
+                            name: _nameController.text.trim(),
+                            businessType: _selectedBusinessType!.trim(),
+                            facebookPage: _facebookPageController.text.trim(),
+                            website: _webPageController.text.trim(),
+                            category: _selectedCategory!.trim(),
+                            review: _reviewController.text.trim(),
+                            phone: _phoneController.text.trim(),
+                            municipal: _municipalController.text.trim(),
+                            address: _addressController.text.trim(),
+                            services: _servicesController.text.trim(),
+                            addedValue: _addedValueController.text.trim(),
+                            opinions: _opinionsController.text.trim(),
+                            whatsapp: _whatsappController.text.trim(),
+                            promotions: _promotionsController.text.trim(),
+                            locationLink: _locationLinkController.text.trim(),
+                            eventDate: _eventDateController.text.trim(),
+                            openingHours: _openingHoursController.text.trim(),
+                            closingHours: _closingHoursController.text.trim(),
+                            prices: _pricesController.text.trim(),
+                          ),
+                          context);
 
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(context
-                              .tr('You have been successfully registered.')),
-                        ),
-                      );
-
-                      Navigator.pop(context);
                     }
                   },
                   child: isLoading

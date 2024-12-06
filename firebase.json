@@ -1,0 +1,39 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "mundotlaxcala",
+          "appId": "1:301222612357:android:b033733e5be413c13548ec",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "mundotlaxcala",
+          "configurations": {
+            "android": "1:301222612357:android:b033733e5be413c13548ec",
+            "ios": "1:301222612357:ios:d046e5530dee03f93548ec",
+            "macos": "1:301222612357:ios:d046e5530dee03f93548ec",
+            "web": "1:301222612357:web:faa4c585a1751e4c3548ec",
+            "windows": "1:301222612357:web:1924a9a546116b803548ec"
+          }
+        }
+      }
+    }
+  },
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

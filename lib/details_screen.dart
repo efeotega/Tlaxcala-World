@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 class DetailsScreen extends StatelessWidget {
   final Business business;
 
-  const DetailsScreen({Key? key, required this.business}) : super(key: key);
+  const DetailsScreen({super.key, required this.business});
 
   @override
   Widget build(BuildContext context) {
@@ -97,7 +97,7 @@ class DetailsScreen extends StatelessWidget {
   }
 
   Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<String> imagePaths = business.imagePaths.split(",");
+    List<dynamic> imagePaths = business.imagePaths;
     return imagePaths.map((path) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -112,8 +112,8 @@ class DetailsScreen extends StatelessWidget {
                   ),
                 );
               },
-              child: Image.file(
-                File(path),
+              child: Image.network(
+                path,
                 width: 150,
                 height: 150,
                 fit: BoxFit.cover,
@@ -127,7 +127,7 @@ class DetailsScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
-        _buildInfoCard(Icons.build, context.tr(''), business.services, context),
+        _buildInfoCard(Icons.build, 'service', business.services, context),
         GestureDetector(
             onTap: () {
               launchUrl(Uri.parse(business.locationLink));
@@ -151,8 +151,22 @@ class DetailsScreen extends StatelessWidget {
           child: _buildInfoCard(
               Icons.facebook, context.tr(''), business.facebookPage, context),
         ),
-        _buildInfoCard(Icons.phone, context.tr(''), business.phone, context),
+       GestureDetector(
+  onTap: () async {
+    final phoneNumber = business.phone; // Replace with your phone variable
+    final url = 'tel:$phoneNumber';
 
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      // Handle the error, e.g., show a Snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('Could not launch phone call'))),
+      );
+    }
+  },
+  child: _buildInfoCard(Icons.phone, '', business.phone, context),
+),
        
         // _buildInfoCard(Icons.attach_money, context.tr('Prices'),
         //     business.prices, context),
@@ -201,7 +215,7 @@ class DetailsScreen extends StatelessWidget {
   }
 
   Widget _buildRatingsTab() {
-    return Center(child: Text('Ratings coming soon!'));
+    return const Center(child: Text('Ratings coming soon!'));
   }
 
   Widget _buildPhotosTab(BuildContext context) {
@@ -277,6 +291,28 @@ class DetailsScreen extends StatelessWidget {
     //     ],
     //   );
     // }
+    if(title=="service"){
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  
+                  Text(
+                    content,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+  
+    }
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       elevation: 4,

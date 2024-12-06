@@ -1,7 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'database_helper.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:tlaxcala_world/feedback/feedback_methods.dart';
+import 'package:tlaxcala_world/firebase_methods.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tlaxcala_world/forgot_password_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,10 +17,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _rememberCredentials = false;
   bool isPasswordVisible = false;
+  bool googleSignInLoading = false;
 
   final adminCredentials = {'username': 'A1311158', 'password': 'Citizen01'};
   Future<void> saveToPreferences(
@@ -26,6 +33,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   String _selectedLanguage = 'fr';
+  void _recoverPassword() {
+     Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ForgotPasswordPage(),
+                  ),
+                );
+  }
 
   void _changeLanguage(String languageCode) {
     setState(() {
@@ -36,28 +51,14 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _login() async {
-    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
-    saveToPreferences(username, password, _rememberCredentials);
+    saveToPreferences(email, password, _rememberCredentials);
 
-    if (username == adminCredentials['username'] &&
-        password == adminCredentials['password']) {
-      // Navigate to Business Registration
-      Navigator.pushNamed(context, '/businessRegistration');
-    } else {
-      final user = await DatabaseHelper().getUser(username, password);
-
-      if (user != null) {
-        // Navigate to Menu
-        Navigator.pushNamed(context, '/menu');
-      } else {
-        // Show error or redirect to User Registration
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Invalid credentials. Please register.')),
-        );
-      }
-    }
+    //get from firebase
+    await loginUser(email, password, context);
+    //final user = await DatabaseHelper().getUser(username, password);
+    // Navigate to Menu
   }
 
   Future<void> readFromPreferences() async {
@@ -70,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
         password != null &&
         rememberMe != null &&
         rememberMe) {
-      _usernameController.text = username;
+      _emailController.text = username;
       _passwordController.text = password;
     } else {
       print('No data found or rememberMe is false.');
@@ -82,10 +83,108 @@ class _LoginScreenState extends State<LoginScreen> {
     // TODO: implement initState
     doRead();
     super.initState();
+    _signOutUser();
   }
 
+Future<void> _signOutUser() async {
+    try {
+      // Sign out from Firebase Auth
+      await _auth.signOut();
+
+      // Sign out from Google Sign-In (for Android/iOS)
+      if (!kIsWeb) {
+        await GoogleSignIn().signOut();
+      }
+      print('User signed out successfully.');
+    } catch (e) {
+      print('Error during sign-out: $e');
+    }
+  }
   void doRead() async {
     await readFromPreferences();
+  }
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  Future<void> _registerWithGoogle() async {
+    setState(() {
+      googleSignInLoading = true;
+    });
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    UserCredential userCredential;
+    try {
+      if (kIsWeb) {
+        // Web Authentication
+        GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        userCredential = await _auth.signInWithPopup(googleProvider);
+      } else {
+        // Android/iOS Authentication
+        final GoogleSignIn googleSignIn = GoogleSignIn();
+        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+        if (googleUser == null) {
+          print('User canceled the sign-in.');
+          return;
+        }
+
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+
+        userCredential = await _auth.signInWithCredential(credential);
+      }
+
+      // Check if user is logged in successfully
+      final User? user = userCredential.user;
+      if (user != null) {
+        bool userExists = await checkIfUserExists(user.email!);
+        if (userExists) {
+          print('User is already registered.');
+        } else {
+          print('New user. You can add user to Firestore.');
+          // Add the user to Firestore if needed
+          await _firestore.collection('users').doc(user.uid).set({
+            'email': user.email,
+            'createdAt': Timestamp.now(),
+          });
+        }
+        showSnackbar(context, context.tr("Registration successfull"));
+        Navigator.pushReplacementNamed(context, '/menu');
+      }
+    } catch (e) {
+      print('Sign-In Failed: $e');
+      setState(() {
+        googleSignInLoading = false;
+      });
+      
+    }
+  }
+
+  Future<bool> checkIfUserExists(String email) async {
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    try {
+      // Query the 'users' collection where 'email' field matches the input
+      final QuerySnapshot result = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      // If the result has documents, the user exists
+      if (result.docs.isNotEmpty) {
+        print('User exists with email: $email');
+        return true;
+      } else {
+        print('No user found with email: $email');
+        return false;
+      }
+    } catch (e) {
+      print('Error checking user existence: $e');
+      return false;
+    }
   }
 
   @override
@@ -103,11 +202,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const Center(
                   child: Text(
-                    'Mundo\nTlaxcala',
+                    'Encuentra de \nTodo \nTlaxcala',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontFamily: 'Courgette',
-                      fontSize: 50,
+                      fontSize: 40,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF0097b2),
                     ),
@@ -115,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
                 const SizedBox(
-                  height: 20,
+                  height: 10,
                 ),
                 // Text(
                 //   context.tr('Login'),
@@ -125,9 +224,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 30),
                 // Username Input
                 TextField(
-                  controller: _usernameController,
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: context.tr('Username'),
+                    labelText: context.tr('Email'),
                     labelStyle: TextStyle(color: Colors.grey[600]),
                     border: const OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
@@ -142,6 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Password Input
                 TextField(
                   controller: _passwordController,
+                  keyboardType: TextInputType.text,
                   obscureText: !isPasswordVisible, // Toggle password visibility
                   decoration: InputDecoration(
                     labelText: context.tr('Password'),
@@ -167,6 +268,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _recoverPassword,
+                      child: Text(context.tr('Recover Password')),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Row(
@@ -224,6 +335,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
+                const SizedBox(height: 30),
+                Text(context.tr('Or Login With')),
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  onPressed: _registerWithGoogle,
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(150, 50),
+                  ),
+                  icon: const Icon(Icons.g_mobiledata),
+                  label: googleSignInLoading
+                      ? const CircularProgressIndicator()
+                      : Text(context.tr('Google')),
+                ),
                 const SizedBox(height: 20),
                 // Registration Button
                 TextButton(
@@ -239,6 +363,24 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // ElevatedButton.icon(
+                    //   onPressed: _registerWithFacebook,
+                    //   style: ElevatedButton.styleFrom(
+                    //     minimumSize: const Size(150, 50),
+                    //   ),
+                    //   icon: const Icon(Icons.facebook),
+                    //   label: Text(context.tr('Facebook')),
+                    // ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+                Text("${context.tr("Contact")} +246124191")
               ],
             ),
           ),

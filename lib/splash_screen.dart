@@ -21,7 +21,7 @@ class SplashScreen extends StatelessWidget {
             SizedBox(height: 20),
             // App Name
             Text(
-              'Mundo\nTlaxcala',
+              'Encuentra de \nTodo \nTlaxcala',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Courgette',

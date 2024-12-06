@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'database_helper.dart';
@@ -27,24 +28,62 @@ class _CategoryScreenState extends State<CategoryScreen> {
     _loadFilteredBusinesses();
   }
 
-  void _loadFilteredBusinesses() async {
-    final businessesMap = await DatabaseHelper().getBusinesses();
-    final businesses =
-        businessesMap.map((map) => Business.fromMap(map)).toList();
+  Future<void> _loadFilteredBusinesses() async {
+    print(widget.businessType);
+    print(widget.category);
+    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-    setState(() {
-      _filteredBusinesses = businesses
-          .where((business) =>
-              business.businessType == widget.businessType &&
-              business.category == widget.category &&
-              (business.name
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  _searchQuery.isEmpty))
-          .toList();
+    try {
+      // Fetch businesses that match the businessType and category
+      final querySnapshot = await _firestore
+          .collection('businesses')
+          .where('businessType', isEqualTo: widget.businessType)
+          .where('category', isEqualTo: widget.category)
+          .get();
 
-      _applySorting();
-    });
+      // Map Firestore documents to Business objects
+      final businesses = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return Business(
+          id: data['id'],
+          name: data['name'] ?? '',
+          businessType: data['businessType'] ?? '',
+          facebookPage: data['facebookPage'] ?? '',
+          website: data['website'] ?? '',
+          category: data['category'] ?? '',
+          review: data['review'] ?? '',
+          phone: data['phone'] ?? '',
+          municipal: data['municipal'] ?? '',
+          address: data['address'] ?? '',
+          services: data['services'] ?? '',
+          addedValue: data['addedValue'] ?? '',
+          opinions: data['opinions'] ?? '',
+          whatsapp: data['whatsapp'] ?? '',
+          promotions: data['promotions'] ?? '',
+          locationLink: data['locationLink'] ?? '',
+          eventDate: data['eventDate'] ?? '',
+          openingHours: data['openingHours'] ?? '',
+          closingHours: data['closingHours'] ?? '',
+          prices: data['prices'] ?? '',
+          imagePaths: data['imagePaths'],
+        );
+      }).toList();
+
+      setState(() {
+        // Apply filtering based on the search query
+        _filteredBusinesses = businesses
+            .where((business) =>
+                business.name
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ||
+                _searchQuery.isEmpty)
+            .toList();
+
+        _applySorting();
+      });
+    } catch (e) {
+      print('Error loading filtered businesses: $e');
+    }
   }
 
   void _applySorting() {
@@ -54,8 +93,9 @@ class _CategoryScreenState extends State<CategoryScreen> {
           _filteredBusinesses
               .sort((a, b) => a.eventDate.compareTo(b.eventDate));
           break;
-        case 'Municipality':
-          _filteredBusinesses.sort((a, b) => a.municipal.compareTo(b.municipal));
+        case 'Municipal':
+          _filteredBusinesses
+              .sort((a, b) => a.municipal.compareTo(b.municipal));
           break;
         case 'Alphabetical':
           _filteredBusinesses.sort((a, b) => a.name.compareTo(b.name));
@@ -81,7 +121,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("${context.tr(widget.businessType)}-${context.tr(widget.category)}"),
+        title: Text(context.tr(widget.category)),
         actions: [
           IconButton(
             icon: const Icon(Icons.sort),
@@ -126,7 +166,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             children: [
               if (_filteredBusinesses.isNotEmpty)
                 SizedBox(
-                  height: 300,
+                  height: MediaQuery.of(context).size.height - 200,
                   child: ListView.builder(
                     itemCount: _filteredBusinesses.length,
                     itemBuilder: (context, index) {
@@ -150,12 +190,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   for (String imagePath
-                                      in business.imagePaths.split(",").take(1))
+                                      in business.imagePaths.take(1))
                                     Padding(
                                       padding:
                                           const EdgeInsets.only(right: 8.0),
-                                      child: Image.file(
-                                        File(imagePath),
+                                      child: Image.network(
+                                        imagePath,
                                         width: 60,
                                         height: 60,
                                         fit: BoxFit.cover,
@@ -175,10 +215,16 @@ class _CategoryScreenState extends State<CategoryScreen> {
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${context.tr('Date')}: ${business.eventDate}',
+                                  '${context.tr('Municipal')}: ${business.municipal}',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  business.eventDate,
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 4),
@@ -216,7 +262,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 groupValue: _sortCriterion,
                 onChanged: (value) {
                   setState(() {
-                    _sortCriterion = value.toString();
+                    _sortCriterion = "Alphabetical";
                   });
                   Navigator.pop(context);
                   _applySorting();
@@ -228,7 +274,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 groupValue: _sortCriterion,
                 onChanged: (value) {
                   setState(() {
-                    _sortCriterion = value.toString();
+                    _sortCriterion = "Date";
                   });
                   Navigator.pop(context);
                   _applySorting();
@@ -236,11 +282,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
               ),
               RadioListTile(
                 title: Text(context.tr('Municipal')),
-                value: 'Municipality',
+                value: 'Municipal',
                 groupValue: _sortCriterion,
                 onChanged: (value) {
                   setState(() {
-                    _sortCriterion = value.toString();
+                    _sortCriterion = "Municipal";
                   });
                   Navigator.pop(context);
                   _applySorting();
@@ -252,7 +298,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 groupValue: _sortCriterion,
                 onChanged: (value) {
                   setState(() {
-                    _sortCriterion = value.toString();
+                    _sortCriterion = "Schedule";
                   });
                   Navigator.pop(context);
                   _applySorting();

@@ -1,6 +1,7 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tlaxcala_world/add_business_screen.dart';
+import 'package:tlaxcala_world/all_users.dart';
 import 'package:tlaxcala_world/delete_business_screen.dart';
 import 'package:tlaxcala_world/business_registration_screen.dart';
 import 'package:tlaxcala_world/splash_screen.dart';
@@ -8,10 +9,15 @@ import 'package:tlaxcala_world/welcome_screen.dart';
 import 'login_screen.dart';
 import 'menu_screen.dart';
 import 'user_registration_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EasyLocalization.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 //   final dbPath = await getDatabasesPath();
 // await deleteDatabase(join(dbPath, 'app_database.db'));
 
@@ -50,6 +56,7 @@ class MyApp extends StatelessWidget {
         '/':(context)=> const SplashScreen(),
         '/userRegistration': (context) => const UserRegistrationScreen(),
         '/businessRegistration': (context) =>  const BusinessRegistrationScreen(),
+        '/view-users':(context)=> UsersPage(),
       },
       theme: ThemeData.light().copyWith(
   primaryColor: const Color(0xFF0097b2),

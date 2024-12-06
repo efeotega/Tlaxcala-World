@@ -27,7 +27,7 @@ class BusinessDetailsScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image Section
-             for (String imagePath in business.imagePaths.split(","))
+             for (String imagePath in business.imagePaths)
             Image.network(imagePath, height: 200, fit: BoxFit.cover),
 
             // Business Name and Type
