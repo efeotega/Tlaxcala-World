@@ -59,21 +59,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Logo at the top center
-            const Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: Center(
-                child: Text(
-                  'Encuentra de \nTodo \nTlaxcala',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: 'Courgette',
-                    fontSize: 50,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF0097b2),
-                  ),
-                ),
-              ),
-            ),
+            // const Padding(
+            //   padding: EdgeInsets.only(top: 40),
+            //   child: Center(
+            //     child: Text(
+            //       'Encuentra de \nTodo \nTlaxcala',
+            //       textAlign: TextAlign.center,
+            //       style: TextStyle(
+            //         fontFamily: 'Courgette',
+            //         fontSize: 50,
+            //         fontWeight: FontWeight.bold,
+            //         color: Color(0xFF0097b2),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            Image.asset("logo.jpg"),
 
             const SizedBox(height: 40),
 
@@ -91,36 +92,37 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
             const SizedBox(height: 40),
 
-            // Login Button
             ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/login'); // Navigate to login
-              },
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              child: Text(context.tr('Access')),
-            ),
+  onPressed: () {
+    Navigator.pushNamed(context, '/menu');
+  },
+  onLongPress: () {
+    Navigator.pushNamed(context, '/login');
+  },
+  style: ElevatedButton.styleFrom(
+    minimumSize: const Size.fromHeight(50),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8.0),
+    ),
+  ),
+  child: Text(context.tr('Access')),
+),
 
-            const SizedBox(height: 16),
-
-            // Sign-Up Button
-            OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(
-                    context, '/userRegistration'); // Navigate to sign-up
-              },
-              style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              child: Text(context.tr('User Registration')),
-            ),
+            
+            // // Sign-Up Button
+            // OutlinedButton(
+            //   onPressed: () {
+            //     Navigator.pushNamed(
+            //         context, '/userRegistration'); // Navigate to sign-up
+            //   },
+            //   style: OutlinedButton.styleFrom(
+            //     minimumSize: const Size.fromHeight(50),
+            //     shape: RoundedRectangleBorder(
+            //       borderRadius: BorderRadius.circular(8.0),
+            //     ),
+            //   ),
+            //   child: Text(context.tr('User Registration')),
+            // ),
 
             const SizedBox(height: 20),
           ],

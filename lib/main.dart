@@ -18,18 +18,14 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-//   final dbPath = await getDatabasesPath();
-// await deleteDatabase(join(dbPath, 'app_database.db'));
-
-// sqfliteFfiInit();
-//   databaseFactory = databaseFactoryFfi;
   runApp(
     EasyLocalization(
         supportedLocales: const [
           Locale('en', 'US'),
           Locale('en'),
           Locale('es'),
-          Locale('es', 'MX')],
+          Locale('es', 'MX'),
+        ],
         path: 'assets/translations',
         fallbackLocale: const Locale('en', 'US'),
         child: const MyApp()),
@@ -41,7 +37,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     return MaterialApp(
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
@@ -52,22 +47,40 @@ class MyApp extends StatelessWidget {
         '/addBusiness': (context) => const AddBusinessScreen(),
         '/deleteBusiness': (context) => const DeleteBusinessScreen(),
         '/menu': (context) => const MenuScreen(),
-        '/welcome': (context) =>  const WelcomeScreen(),
-        '/':(context)=> const SplashScreen(),
+        '/welcome': (context) => const WelcomeScreen(),
+        '/': (context) => const SplashScreen(),
         '/userRegistration': (context) => const UserRegistrationScreen(),
-        '/businessRegistration': (context) =>  const BusinessRegistrationScreen(),
-        '/view-users':(context)=> UsersPage(),
+        '/businessRegistration': (context) => const BusinessRegistrationScreen(),
+        '/view-users': (context) => UsersPage(),
       },
       theme: ThemeData.light().copyWith(
-  primaryColor: const Color(0xFF0097b2),
-  colorScheme: ThemeData.light().colorScheme.copyWith(primary: Colors.blue),
-),
-darkTheme: ThemeData.dark().copyWith(
-  primaryColor: const Color(0xFF0097b2),
-  colorScheme: ThemeData.dark().colorScheme.copyWith(primary: Colors.blueGrey),
-),
-themeMode: ThemeMode.system, // Use system theme by default
-
+        
+        primaryColor: const Color(0xFF270949),
+        //primaryColor: const Color(0xFF0097b2),
+        scaffoldBackgroundColor: const Color(0xFFFFFFFF),
+        textTheme: ThemeData.light().textTheme.apply(
+              fontFamily: 'Montserrat',
+              bodyColor: const Color(0xFF270949),
+              displayColor: const Color(0xFF270949),
+            ),
+        colorScheme: ThemeData.light().colorScheme.copyWith(
+              primary:const Color(0xFF270949),
+              surface: const Color(0xFFFFFFFF),
+            ),
+      ),
+      // darkTheme: ThemeData.dark().copyWith(
+      //   primaryColor: const Color(0xFF0097b2),
+      //   textTheme: ThemeData.dark().textTheme.apply(
+      //         fontFamily: 'Montserrat',
+      //         bodyColor: const Color(0xFF270949),
+      //         displayColor: const Color(0xFF270949),
+      //       ),
+      //   colorScheme: ThemeData.dark().colorScheme.copyWith(
+      //         primary: Colors.blueGrey,
+      //         surface: const Color(0xFF121212),
+      //       ),
+      // ),
+      themeMode: ThemeMode.light,
     );
   }
 }

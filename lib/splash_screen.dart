@@ -11,8 +11,8 @@ class SplashScreen extends StatelessWidget {
       Navigator.pushReplacementNamed(context, '/welcome');
     });
 
-    return const Scaffold(
-      backgroundColor: Color(0xFF0097b2), // Adjust the background color if needed
+    return  Scaffold(
+      backgroundColor: Colors.white, // Adjust the background color if needed
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -20,16 +20,17 @@ class SplashScreen extends StatelessWidget {
             // App Logo
             SizedBox(height: 20),
             // App Name
-            Text(
-              'Encuentra de \nTodo \nTlaxcala',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Courgette',
-                fontSize: 50,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            // Text(
+            //   'Encuentra de \nTodo \nTlaxcala',
+            //   textAlign: TextAlign.center,
+            //   style: TextStyle(
+            //     fontFamily: 'Courgette',
+            //     fontSize: 50,
+            //     fontWeight: FontWeight.bold,
+            //     color: Colors.white,
+            //   ),
+            // ),
+            Image.asset("logo.jpg")
           ],
         ),
       ),

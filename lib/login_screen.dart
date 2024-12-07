@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:tlaxcala_world/firebase_methods.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tlaxcala_world/forgot_password_page.dart';
@@ -54,9 +55,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     saveToPreferences(email, password, _rememberCredentials);
-
+    if(email=="A1311158"&&password=="Citizen01"){
+      Navigator.pushNamed(context,"/businessRegistration");
+    }
     //get from firebase
-    await loginUser(email, password, context);
+   // await loginUser(email, password, context);
     //final user = await DatabaseHelper().getUser(username, password);
     // Navigate to Menu
   }
@@ -200,18 +203,19 @@ Future<void> _signOutUser() async {
                   height: 30,
                 ),
 
-                const Center(
-                  child: Text(
-                    'Encuentra de \nTodo \nTlaxcala',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Courgette',
-                      fontSize: 40,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0097b2),
-                    ),
-                  ),
-                ),
+                // const Center(
+                //   child: Text(
+                //     'Encuentra de \nTodo \nTlaxcala',
+                //     textAlign: TextAlign.center,
+                //     style: TextStyle(
+                //       fontFamily: 'Courgette',
+                //       fontSize: 40,
+                //       fontWeight: FontWeight.bold,
+                //       color: Color(0xFF0097b2),
+                //     ),
+                //   ),
+                // ),
+                Image.asset("logo.jpg"),
 
                 const SizedBox(
                   height: 10,
@@ -227,7 +231,7 @@ Future<void> _signOutUser() async {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   decoration: InputDecoration(
-                    labelText: context.tr('Email'),
+                    labelText: context.tr('Username'),
                     labelStyle: TextStyle(color: Colors.grey[600]),
                     border: const OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
@@ -336,34 +340,34 @@ Future<void> _signOutUser() async {
                   ),
                 ),
                 const SizedBox(height: 30),
-                Text(context.tr('Or Login With')),
-                const SizedBox(height: 10),
-                ElevatedButton.icon(
-                  onPressed: _registerWithGoogle,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(150, 50),
-                  ),
-                  icon: const Icon(Icons.g_mobiledata),
-                  label: googleSignInLoading
-                      ? const CircularProgressIndicator()
-                      : Text(context.tr('Google')),
-                ),
-                const SizedBox(height: 20),
+                // Text(context.tr('Or Login With')),
+                // const SizedBox(height: 10),
+                // ElevatedButton.icon(
+                //   onPressed: _registerWithGoogle,
+                //   style: ElevatedButton.styleFrom(
+                //     minimumSize: const Size(150, 50),
+                //   ),
+                //   icon: const Icon(Icons.g_mobiledata),
+                //   label: googleSignInLoading
+                //       ? const CircularProgressIndicator()
+                //       : Text(context.tr('Google')),
+                // ),
+                // const SizedBox(height: 20),
                 // Registration Button
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/userRegistration');
-                  },
-                  child: Text(
-                    context.tr('User Registration'),
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+                // TextButton(
+                //   onPressed: () {
+                //     Navigator.pushNamed(context, '/userRegistration');
+                //   },
+                //   child: Text(
+                //     context.tr('User Registration'),
+                //     style: TextStyle(
+                //       fontSize: 14,
+                //       color: Theme.of(context).primaryColor,
+                //       fontWeight: FontWeight.bold,
+                //     ),
+                //   ),
+                // ),
+                // const SizedBox(height: 20),
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -380,7 +384,20 @@ Future<void> _signOutUser() async {
                 ),
 
                 const SizedBox(height: 20),
-                Text("${context.tr("Contact")} +246124191")
+                GestureDetector(onTap:()async{
+                  final phoneNumber = "+246124191"; // Replace with your phone variable
+    final url = 'tel:$phoneNumber';
+
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      // Handle the error, e.g., show a Snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('Could not launch phone call'))),
+      );
+    }
+                },child:Text("${context.tr("Contact")} +246124191"))
+                
               ],
             ),
           ),

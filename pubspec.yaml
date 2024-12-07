@@ -45,6 +45,7 @@ dependencies:
   google_sign_in: ^6.2.2
   firebase_auth_web: ^5.13.5
   file_picker: ^8.1.4
+  flutter_launcher_icons: ^0.14.2
   
 flutter_native_splash:
   color: "#ffffff" # Background color
@@ -65,6 +66,10 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
 
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon.jpg"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -79,9 +84,12 @@ flutter:
   - assets/
   - assets/translations/
   fonts:
-    - family: Courgette
+    - family: Montserrat
       fonts:
-        - asset: assets/fonts/Courgette-Regular.ttf
+        - asset: assets/fonts/Montserrat-Light.ttf
+        - asset: assets/fonts/Montserrat-Regular.ttf
+        - asset: assets/fonts/Montserrat-Bold.ttf
+          weight: 700
 
   # To add assets to your application, add an assets section, like this:
   # assets:
