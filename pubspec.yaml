@@ -46,6 +46,7 @@ dependencies:
   firebase_auth_web: ^5.13.5
   file_picker: ^8.1.4
   flutter_launcher_icons: ^0.14.2
+  video_player: ^2.9.2
   
 flutter_native_splash:
   color: "#ffffff" # Background color
@@ -69,7 +70,8 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon.jpg"
+  image_path: "assets/icon.png"
+  remove_alpha_ios: true
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

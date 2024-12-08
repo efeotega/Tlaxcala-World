@@ -30,7 +30,7 @@ class SplashScreen extends StatelessWidget {
             //     color: Colors.white,
             //   ),
             // ),
-            Image.asset("logo.jpg")
+            Image.asset("assets/logo.jpg"),
           ],
         ),
       ),

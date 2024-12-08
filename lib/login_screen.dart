@@ -215,7 +215,8 @@ Future<void> _signOutUser() async {
                 //     ),
                 //   ),
                 // ),
-                Image.asset("logo.jpg"),
+                const SizedBox(height: 20),
+            Image.asset("assets/logo.jpg"),
 
                 const SizedBox(
                   height: 10,

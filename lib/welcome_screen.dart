@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:tlaxcala_world/video_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -56,27 +57,12 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            // Logo at the top center
-            // const Padding(
-            //   padding: EdgeInsets.only(top: 40),
-            //   child: Center(
-            //     child: Text(
-            //       'Encuentra de \nTodo \nTlaxcala',
-            //       textAlign: TextAlign.center,
-            //       style: TextStyle(
-            //         fontFamily: 'Courgette',
-            //         fontSize: 50,
-            //         fontWeight: FontWeight.bold,
-            //         color: Color(0xFF0097b2),
-            //       ),
-            //     ),
-            //   ),
-            // ),
-            Image.asset("logo.jpg"),
-
-            const SizedBox(height: 40),
+            
+            const SizedBox(
+              height: 300,
+              child:  AssetVideoPlayer()),
 
             // Auto-scrolling screens
             Expanded(
@@ -90,7 +76,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 40),
+            const Spacer(),
 
             ElevatedButton(
   onPressed: () {
@@ -105,7 +91,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       borderRadius: BorderRadius.circular(8.0),
     ),
   ),
-  child: Text(context.tr('Access')),
+  child: Text(context.tr('Access'),style: const TextStyle(color: Colors.blue),),
 ),
 
             
@@ -133,7 +119,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   Widget _buildScreen(String title, String details) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      padding: const EdgeInsets.only(left: 16.0,right:16),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
