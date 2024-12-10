@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
+import 'package:tlaxcala_world/video_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:tlaxcala_world/firebase_methods.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -216,7 +217,9 @@ Future<void> _signOutUser() async {
                 //   ),
                 // ),
                 const SizedBox(height: 20),
-            Image.asset("assets/logo.jpg"),
+            const SizedBox(
+              height: 300,
+              child:  AssetVideoPlayer()),
 
                 const SizedBox(
                   height: 10,

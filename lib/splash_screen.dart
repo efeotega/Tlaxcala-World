@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:tlaxcala_world/video_screen.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -7,7 +8,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Navigate to the Home Page after 3 seconds
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 5), () {
       Navigator.pushReplacementNamed(context, '/welcome');
     });
 
@@ -30,7 +31,9 @@ class SplashScreen extends StatelessWidget {
             //     color: Colors.white,
             //   ),
             // ),
-            Image.asset("assets/logo.jpg"),
+             const SizedBox(
+              height: 300,
+              child:  AssetVideoPlayer()),
           ],
         ),
       ),

@@ -146,6 +146,8 @@ Future<void> _loadBusinessTypes() async {
               },
             ),
           ),
+          const SizedBox(height:10),
+           Text(context.tr("Hire our service: 2463608618"))
         ],
       ),
     );

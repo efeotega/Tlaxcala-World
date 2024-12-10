@@ -14,17 +14,17 @@ class FullScreenImagePage extends StatelessWidget {
       backgroundColor: Colors.black, // Dark background for better viewing
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title:  Text(context.tr('Image Preview')),
+        title:  Text(context.tr('Image Preview'),style: const TextStyle(color:Colors.white),),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.close,color: Colors.white,),
           onPressed: () {
             Navigator.pop(context); // Close the full-screen page
           },
         ),
       ),
       body: Center(
-        child: Image.file(
-          File(imagePath),
+        child: Image.network(
+          imagePath,
           fit: BoxFit.contain, // Ensure the image fits within the screen
         ),
       ),

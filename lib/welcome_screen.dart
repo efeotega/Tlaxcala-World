@@ -1,5 +1,6 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:tlaxcala_world/longpressbutton.dart';
 import 'package:tlaxcala_world/video_screen.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -60,10 +61,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             
-            const SizedBox(
-              height: 300,
-              child:  AssetVideoPlayer()),
-
+            const SizedBox(height:170),
+            SizedBox(height:180,child:
+            Image.asset("assets/logo.jpg")),
             // Auto-scrolling screens
             Expanded(
               child: PageView.builder(
@@ -78,21 +78,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
             const Spacer(),
 
-            ElevatedButton(
-  onPressed: () {
-    Navigator.pushNamed(context, '/menu');
-  },
-  onLongPress: () {
-    Navigator.pushNamed(context, '/login');
-  },
-  style: ElevatedButton.styleFrom(
-    minimumSize: const Size.fromHeight(50),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8.0),
-    ),
-  ),
-  child: Text(context.tr('Access'),style: const TextStyle(color: Colors.blue),),
-),
+            LongPressButton(),
 
             
             // // Sign-Up Button
