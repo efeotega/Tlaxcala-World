@@ -13,6 +13,13 @@ class DetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String review="";
+    if(business.review!=""){
+      review=business.review;
+    }
+    else{
+      review="0";
+    }
     return DefaultTabController(
       length: 3, // Number of tabs
       child: Scaffold(
@@ -41,12 +48,13 @@ class DetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Place Name and Rating
+            // // Place Name and Rating
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  
                   Text(
                     business.name,
                     style: const TextStyle(
@@ -57,7 +65,7 @@ class DetailsScreen extends StatelessWidget {
                   Row(
                     children: List.generate(5, (index) {
                       return Icon(
-                        index < int.parse(business.review)
+                        index < int.parse(review)
                             ? Icons.star
                             : Icons.star_border,
                         color: Colors.amber,
@@ -97,7 +105,7 @@ class DetailsScreen extends StatelessWidget {
   }
 
   Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<dynamic> imagePaths = business.imagePaths;
+    List<String> imagePaths = business.imagePaths.cast<String>();
     return imagePaths.map((path) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -181,12 +189,13 @@ class DetailsScreen extends StatelessWidget {
             Navigator.pushReplacementNamed(context, '/menu');
           },
           style: ElevatedButton.styleFrom(
+            backgroundColor:const Color(0xFFF95B3D),
             minimumSize: const Size.fromHeight(50),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8.0),
             ),
           ),
-          child: Text(context.tr('Back to Menu')),
+          child: Text(context.tr('Back to Menu'),style:TextStyle(color:Colors.white)),
         ),
       ],
     );
@@ -219,26 +228,28 @@ class DetailsScreen extends StatelessWidget {
   }
 
   Widget _buildPhotosTab(BuildContext context) {
-    return Center(
-      child: SizedBox(
-        height: 200,
-        child: FutureBuilder<List<Widget>>(
-          future: _buildImageWidgets(context),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return const Center(child: Text('Error loading images'));
-            } else {
-              return ListView(
-                scrollDirection: Axis.horizontal,
-                children: snapshot.data ?? [],
-              );
-            }
-          },
-        ),
-      ),
-    );
+    return SizedBox.shrink();
+    // return Center(
+    //   child: 
+    //   SizedBox(
+    //     height: 200,
+    //     child: FutureBuilder<List<Widget>>(
+    //       future: _buildImageWidgets(context),
+    //       builder: (context, snapshot) {
+    //         if (snapshot.connectionState == ConnectionState.waiting) {
+    //           return const Center(child: CircularProgressIndicator());
+    //         } else if (snapshot.hasError) {
+    //           return const Center(child: Text('Error loading images'));
+    //         } else {
+    //           return ListView(
+    //             scrollDirection: Axis.horizontal,
+    //             children: snapshot.data ?? [],
+    //           );
+    //         }
+    //       },
+    //     ),
+    //   ),
+    
   }
 
   Widget _buildInfoCard(
@@ -303,7 +314,7 @@ class DetailsScreen extends StatelessWidget {
                   
                   Text(
                     content,
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 14,color:const Color(0xFFF95B3D)),
                   ),
                 ],
               ),
@@ -314,6 +325,7 @@ class DetailsScreen extends StatelessWidget {
   
     }
     return Card(
+      color:const Color(0xFFF95B3D),
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -323,7 +335,7 @@ class DetailsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Icon(icon, size: 32, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 32, color: Colors.white),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -336,12 +348,13 @@ class DetailsScreen extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
+                            color:Colors.white
                           ),
                         ),
                   const SizedBox(height: 4),
                   Text(
                     content,
-                    style: const TextStyle(fontSize: 14),
+                    style: const TextStyle(fontSize: 14,color:Colors.white),
                   ),
                 ],
               ),

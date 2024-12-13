@@ -14,7 +14,7 @@ class FullScreenImagePage extends StatelessWidget {
       backgroundColor: Colors.black, // Dark background for better viewing
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title:  Text(context.tr('Image Preview'),style: const TextStyle(color:Colors.white),),
+        title:  Text(context.tr(''),style: const TextStyle(color:Colors.white),),
         leading: IconButton(
           icon: const Icon(Icons.close,color: Colors.white,),
           onPressed: () {

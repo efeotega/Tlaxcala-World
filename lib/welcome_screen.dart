@@ -61,7 +61,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             
-            const SizedBox(height:170),
+            const SizedBox(height:165),
             SizedBox(height:180,child:
             Image.asset("assets/logo.jpg")),
             // Auto-scrolling screens
@@ -78,7 +78,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
             const Spacer(),
 
-            LongPressButton(),
+            const LongPressButton(),
 
             
             // // Sign-Up Button

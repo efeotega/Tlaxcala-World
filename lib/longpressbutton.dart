@@ -45,17 +45,23 @@ class _LongPressButtonState extends State<LongPressButton> {
       },
       onLongPressStart: (_) => _onLongPressStart(context),
       onLongPressEnd: (_) => _onLongPressEnd(),
-      child: ElevatedButton(
-        onPressed: null, // Leave null because tap is handled in GestureDetector
-        style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8.0),
+      child: Padding(
+        padding: const EdgeInsets.only(left:20.0,right:20.0),
+        child: Container(
+          width:MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10.0),
+            color:    const Color(0xFFF95B3D),
           ),
-        ),
-        child: Text(
-          context.tr('Access'),
-          style: const TextStyle(color: Colors.blue),
+          child: Center(
+            child: Padding(
+               padding: const EdgeInsets.only(top:16.0,bottom:16.0),
+               child:Text(
+              context.tr('Access'),
+              style: const TextStyle(color:    Colors.white),
+            ),
+            ),
+          )
         ),
       ),
     );

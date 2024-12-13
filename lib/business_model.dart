@@ -147,4 +147,57 @@ class Business {
       imagePaths: imagePaths ?? this.imagePaths,
     );
   }
+  // Convert a Business object to a JSON map
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'businessType': businessType,
+      'category': category,
+      'review': review,
+      'phone': phone,
+      'address': address,
+      'services': services,
+      'addedValue': addedValue,
+      'municipal': municipal,
+      'opinions': opinions,
+      'whatsapp': whatsapp,
+      'promotions': promotions,
+      'locationLink': locationLink,
+      'facebookPage': facebookPage,
+      'website': website,
+      'eventDate': eventDate,
+      'openingHours': openingHours,
+      'closingHours': closingHours,
+      'prices': prices,
+      'imagePaths': imagePaths,
+    };
+  }
+
+  // Create a Business object from a JSON map
+  factory Business.fromJson(Map<String, dynamic> json) {
+    return Business(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      businessType: json['businessType'] as String,
+      category: json['category'] as String,
+      review: json['review'] as String,
+      phone: json['phone'] as String,
+      address: json['address'] as String,
+      services: json['services'] as String,
+      addedValue: json['addedValue'] as String,
+      municipal: json['municipal'] as String,
+      opinions: json['opinions'] as String,
+      whatsapp: json['whatsapp'] as String,
+      promotions: json['promotions'] as String,
+      locationLink: json['locationLink'] as String,
+      facebookPage: json['facebookPage'] as String,
+      website: json['website'] as String,
+      eventDate: json['eventDate'] as String,
+      openingHours: json['openingHours'] as String,
+      closingHours: json['closingHours'] as String,
+      prices: json['prices'] as String,
+      imagePaths: json['imagePaths'] as List<dynamic>,
+    );
+  }  
 }

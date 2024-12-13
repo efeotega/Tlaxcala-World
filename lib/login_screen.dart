@@ -217,9 +217,9 @@ Future<void> _signOutUser() async {
                 //   ),
                 // ),
                 const SizedBox(height: 20),
-            const SizedBox(
-              height: 300,
-              child:  AssetVideoPlayer()),
+            // const SizedBox(
+            //   height: 300,
+            //   child:  AssetVideoPlayer()),
 
                 const SizedBox(
                   height: 10,
@@ -388,19 +388,19 @@ Future<void> _signOutUser() async {
                 ),
 
                 const SizedBox(height: 20),
-                GestureDetector(onTap:()async{
-                  final phoneNumber = "+246124191"; // Replace with your phone variable
-    final url = 'tel:$phoneNumber';
+    //             GestureDetector(onTap:()async{
+    //               final phoneNumber = "+246124191"; // Replace with your phone variable
+    // final url = 'tel:$phoneNumber';
 
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url));
-    } else {
-      // Handle the error, e.g., show a Snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('Could not launch phone call'))),
-      );
-    }
-                },child:Text("${context.tr("Contact")} +246124191"))
+    // if (await canLaunchUrl(Uri.parse(url))) {
+    //   await launchUrl(Uri.parse(url));
+    // } else {
+    //   // Handle the error, e.g., show a Snackbar
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(content: Text(context.tr('Could not launch phone call'))),
+    //   );
+    // }
+    //             },child:Text("${context.tr("Contact")} +246124191"))
                 
               ],
             ),

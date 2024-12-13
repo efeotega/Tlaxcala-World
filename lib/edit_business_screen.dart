@@ -236,58 +236,99 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     }
   }
 
-  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<Widget> widgets = [];
-    if (kIsWeb) {
-      // Build widgets for web images
-      if (_imagePaths.isEmpty) {
-        for (var bytes in _imageBytes) {
-          widgets.add(Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: Image.memory(
-                bytes,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ));
-        }
+ Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
+  List<Widget> widgets = [];
+
+  void _removeImage(int index, bool isFromBytes) {
+    setState(() {
+      if (isFromBytes) {
+        _imageBytes.removeAt(index);
+      } else {
+        _imagePaths.removeAt(index);
       }
-      for (var path in _imagePaths) {
+    });
+  }
+
+  if (kIsWeb) {
+    // Build widgets for web images
+    if (_imagePaths.isEmpty) {
+      for (int i = 0; i < _imageBytes.length; i++) {
+        final bytes = _imageBytes[i];
         widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
+          Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.memory(
+                    bytes,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () => _removeImage(i, true),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+
+    for (int i = 0; i < _imagePaths.length; i++) {
+      final path = _imagePaths[i];
+      widgets.add(
+        Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
                 child: Image.network(
                   path,
                   width: 100,
                   height: 100,
                   errorBuilder: (context, error, stackTrace) {
-                    for (var bytes in _imageBytes) {
-                      return Image.memory(
-                        bytes,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                      );
-                    }
-                    return const SizedBox.shrink();
+                    return Image.memory(
+                      _imageBytes.isNotEmpty ? _imageBytes[i] : Uint8List(0),
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    );
                   },
-                )),
-          ),
-        );
-      }
-    } else {
-      // Build widgets for mobile images
-      for (var path in _imagePaths) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.red),
+                onPressed: () => _removeImage(i, false),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  } else {
+    // Build widgets for mobile images
+    for (int i = 0; i < _imagePaths.length; i++) {
+      final path = _imagePaths[i];
+      widgets.add(
+        Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: ClipRRect(
                 borderRadius: BorderRadius.circular(8.0),
                 child: Image.network(
                   path,
@@ -301,13 +342,25 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                       fit: BoxFit.cover,
                     );
                   },
-                )),
-          ),
-        );
-      }
+                ),
+              ),
+            ),
+            Positioned(
+              top: 4,
+              right: 4,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.red),
+                onPressed: () => _removeImage(i, false),
+              ),
+            ),
+          ],
+        ),
+      );
     }
-    return widgets;
   }
+
+  return widgets;
+}
 
   Map<String, List<String>> businessCategories = {
     'Cinema': ['Billboards', 'Cinemas'],

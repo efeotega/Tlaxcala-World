@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:tlaxcala_world/data_manager.dart';
 import 'database_helper.dart';
 import 'category_screen.dart'; // Import your CategoryScreen
 
@@ -13,7 +14,7 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   List<String> _businessTypes = [];
-  final Map<String, List<String>> _categoriesByType = {};
+  Map<String, List<String>> _categoriesByType = {};
   String? _expandedBusinessType;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -25,41 +26,26 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
 Future<void> _loadBusinessTypes() async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final now = DateTime.now();
+  final businessDataManager = BusinessDataManager();
 
-  try {
-    // Fetch unique business types from Firestore
-    final businessTypesSnapshot = await _firestore.collection('businesses').get();
-    final businessTypes = businessTypesSnapshot.docs
-        .map((doc) => doc['businessType'] as String)
-        .toSet()
-        .toList();
-
-    setState(() {
-      _businessTypes = businessTypes;
-    });
-
-    // Fetch categories for each business type
-    for (String type in businessTypes) {
-      final categoriesSnapshot = await _firestore
-          .collection('businesses')
-          .where('businessType', isEqualTo: type)
-          .get();
-
-      final categories = categoriesSnapshot.docs
-          .map((doc) => doc['category'] as String)
-          .toSet()
-          .toList();
-
-      setState(() {
-        _categoriesByType[type] = categories;
-      });
-    }
-  } catch (e) {
-    print('Error loading business types and categories: $e');
+  // Decide data source
+  if (now.weekday == DateTime.friday || businessDataManager.getLastSyncedDate('business_data') == null) {
+    // Fetch from Firebase on Fridays or if no previous sync exists
+    await businessDataManager.fetchAndSaveBusinessData();
   }
-}
 
+  // Load data from Hive
+  final data = await businessDataManager.loadBusinessDataFromHive();
+  final businessTypes = data['businessTypes'] as List<String>;
+  final categoriesByType = data['categoriesByType'] as Map<String, List<String>>;
+
+  // Update UI
+  setState(() {
+    _businessTypes = businessTypes;
+    _categoriesByType = categoriesByType;
+  });
+}
 
   void _navigateToCategoryScreen(String type, String category) {
     Navigator.push(
@@ -102,6 +88,7 @@ Future<void> _loadBusinessTypes() async {
               },
             ),
           ),
+          filteredBusinessTypes.isEmpty?Expanded(child: Center(child: const CircularProgressIndicator())):
           Expanded(
             child: ListView.builder(
               itemCount: filteredBusinessTypes.length,
@@ -112,19 +99,23 @@ Future<void> _loadBusinessTypes() async {
                 return Padding(
                   padding: const EdgeInsets.only(left:16.0,right:16),
                   child: Card(
+                    color: const Color(0xFFF95B3D),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12.0),
                     ),
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 10),
                     child: ExpansionTile(
+                      collapsedIconColor: Colors.white,
+                      iconColor: Colors.white,
+                      backgroundColor: const Color(0xFFF95B3D),
                       key: PageStorageKey(businessType),
                       title: Text(
                         context.tr(businessType),
                         style: Theme.of(context)
                             .textTheme
                             .bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.bold),
+                            ?.copyWith(fontWeight: FontWeight.bold,color:Colors.white),
                       ),
                       initiallyExpanded: _expandedBusinessType == businessType,
                       onExpansionChanged: (expanded) {
@@ -136,7 +127,8 @@ Future<void> _loadBusinessTypes() async {
                           .where((category) => category.toLowerCase().contains(_searchQuery.toLowerCase()))
                           .map((category) {
                         return ListTile(
-                          title: Text(context.tr(category)),
+                          
+                          title: Text(context.tr(category),style:TextStyle(color:Colors.white)),
                           onTap: () => _navigateToCategoryScreen(businessType, category),
                         );
                       }).toList(),
@@ -146,6 +138,7 @@ Future<void> _loadBusinessTypes() async {
               },
             ),
           ),
+          
           const SizedBox(height:10),
            Text(context.tr("Hire our service: 2463608618"))
         ],

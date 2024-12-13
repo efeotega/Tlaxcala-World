@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'database_helper.dart';
 import 'business_model.dart';
 import 'details_screen.dart';
+import 'package:hive/hive.dart';
 
 class CategoryScreen extends StatefulWidget {
   final String businessType;
@@ -27,14 +28,15 @@ class _CategoryScreenState extends State<CategoryScreen> {
     super.initState();
     _loadFilteredBusinesses();
   }
+Future<void> _loadFilteredBusinesses() async {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final now = DateTime.now();
+  final hiveBoxName = 'filtered_businesses_${widget.businessType}_${widget.category}';
 
-  Future<void> _loadFilteredBusinesses() async {
-    print(widget.businessType);
-    print(widget.category);
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-    try {
-      // Fetch businesses that match the businessType and category
+  try {
+    // Determine the data source
+    if (now.weekday == DateTime.friday || !(await Hive.boxExists(hiveBoxName))) {
+      // Fetch from Firebase
       final querySnapshot = await _firestore
           .collection('businesses')
           .where('businessType', isEqualTo: widget.businessType)
@@ -69,22 +71,47 @@ class _CategoryScreenState extends State<CategoryScreen> {
         );
       }).toList();
 
+      // Save to Hive
+      final box = await Hive.openBox(hiveBoxName);
+      await box.put('businesses', businesses.map((b) => b.toJson()).toList());
+      await box.put('lastSynced', now.toIso8601String());
+
+      // Update UI
       setState(() {
-        // Apply filtering based on the search query
         _filteredBusinesses = businesses
             .where((business) =>
                 business.name
                     .toLowerCase()
                     .contains(_searchQuery.toLowerCase()) ||
                 _searchQuery.isEmpty)
-            .toList();
-
-        _applySorting();
+            .toList()
+          ..shuffle();
       });
-    } catch (e) {
-      print('Error loading filtered businesses: $e');
+    } else {
+      // Fetch from Hive
+      final box = await Hive.openBox(hiveBoxName);
+      final savedBusinesses = box.get('businesses', defaultValue: []);
+      final businesses = (savedBusinesses as List<dynamic>)
+          .map((json) =>
+              Business.fromJson(Map<String, dynamic>.from(json as Map)))
+          .toList();
+
+      // Update UI
+      setState(() {
+        _filteredBusinesses = businesses
+            .where((business) =>
+                business.name
+                    .toLowerCase()
+                    .contains(_searchQuery.toLowerCase()) ||
+                _searchQuery.isEmpty)
+            .toList()
+          ..shuffle();
+      });
     }
+  } catch (e) {
+    print('Error loading filtered businesses: $e');
   }
+}
 
   void _applySorting() {
     setState(() {
@@ -152,13 +179,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
             children: [
               if (_filteredBusinesses.isEmpty)
                 Center(
-                  child: Text(
-                    context.tr('No businesses found for this category'),
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                          fontStyle: FontStyle.italic,
-                        ),
-                  ),
+                  child: CircularProgressIndicator()
                 ),
             ],
           ),
@@ -166,12 +187,13 @@ class _CategoryScreenState extends State<CategoryScreen> {
             children: [
               if (_filteredBusinesses.isNotEmpty)
                 SizedBox(
-                  height: MediaQuery.of(context).size.height - 200,
+                  height: MediaQuery.of(context).size.height - 150,
                   child: ListView.builder(
                     itemCount: _filteredBusinesses.length,
                     itemBuilder: (context, index) {
                       final business = _filteredBusinesses[index];
                       return Card(
+                        color: const Color(0xFFF95B3D),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.0),
                         ),
@@ -210,6 +232,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                   .textTheme
                                   .bodyMedium
                                   ?.copyWith(
+                                    color: Colors.white,
                                     fontWeight: FontWeight.bold,
                                   ),
                             ),
@@ -220,7 +243,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   '${context.tr('Municipal')}: ${business.municipal}',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith( color: Colors.white,),
+                                  
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
@@ -230,7 +254,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   '${context.tr('Schedule')}: ${business.openingHours}',
-                                  style: Theme.of(context).textTheme.bodySmall,
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith( color: Colors.white,),
                                 ),
                               ],
                             ),
