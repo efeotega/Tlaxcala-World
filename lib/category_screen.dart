@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:tlaxcala_world/feedback/feedback_methods.dart';
 import 'database_helper.dart';
 import 'business_model.dart';
 import 'details_screen.dart';
@@ -109,7 +110,8 @@ Future<void> _loadFilteredBusinesses() async {
       });
     }
   } catch (e) {
-    print('Error loading filtered businesses: $e');
+   // print('Error loading filtered businesses: $e');
+   showSnackbar(context, 'Error loading filtered businesses: $e');
   }
 }
 
@@ -187,7 +189,7 @@ Future<void> _loadFilteredBusinesses() async {
             children: [
               if (_filteredBusinesses.isNotEmpty)
                 SizedBox(
-                  height: MediaQuery.of(context).size.height - 150,
+                  height: MediaQuery.of(context).size.height - 180,
                   child: ListView.builder(
                     itemCount: _filteredBusinesses.length,
                     itemBuilder: (context, index) {

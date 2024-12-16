@@ -1,7 +1,8 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // For formatting the createdAt timestamp
+import 'package:intl/intl.dart';
+import 'package:tlaxcala_world/feedback/feedback_methods.dart'; // For formatting the createdAt timestamp
 
 class UsersPage extends StatefulWidget {
   @override
@@ -37,7 +38,8 @@ class _UsersPageState extends State<UsersPage> {
         _loading = false;
       });
     } catch (e) {
-      print('Error fetching users: $e');
+      //print('Error fetching users: $e');
+      showSnackbar(context, 'Error fetching users: $e');
       setState(() {
         _loading = false;
       });

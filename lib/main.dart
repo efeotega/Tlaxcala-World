@@ -20,6 +20,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  
   runApp(
     EasyLocalization(
         supportedLocales: const [
@@ -45,20 +46,18 @@ class MyApp extends StatelessWidget {
       locale: context.locale,
       initialRoute: '/',
       routes: {
+        '/': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/addBusiness': (context) => const AddBusinessScreen(),
         '/deleteBusiness': (context) => const DeleteBusinessScreen(),
         '/menu': (context) => const MenuScreen(),
-        '/welcome': (context) => const WelcomeScreen(),
-        '/': (context) => const SplashScreen(),
+        //'/welcome': (context) => const WelcomeScreen(),
         '/userRegistration': (context) => const UserRegistrationScreen(),
         '/businessRegistration': (context) => const BusinessRegistrationScreen(),
         '/view-users': (context) => UsersPage(),
       },
       theme: ThemeData.light().copyWith(
-        
         primaryColor: const Color(0xFF270949),
-        //primaryColor: const Color(0xFF0097b2),
         scaffoldBackgroundColor: const Color(0xFFFFFFFF),
         textTheme: ThemeData.light().textTheme.apply(
               fontFamily: 'Montserrat',
@@ -66,22 +65,10 @@ class MyApp extends StatelessWidget {
               displayColor: const Color(0xFF270949),
             ),
         colorScheme: ThemeData.light().colorScheme.copyWith(
-              primary:const Color(0xFF270949),
+              primary: const Color(0xFF270949),
               surface: const Color(0xFFFFFFFF),
             ),
       ),
-      // darkTheme: ThemeData.dark().copyWith(
-      //   primaryColor: const Color(0xFF0097b2),
-      //   textTheme: ThemeData.dark().textTheme.apply(
-      //         fontFamily: 'Montserrat',
-      //         bodyColor: const Color(0xFF270949),
-      //         displayColor: const Color(0xFF270949),
-      //       ),
-      //   colorScheme: ThemeData.dark().colorScheme.copyWith(
-      //         primary: Colors.blueGrey,
-      //         surface: const Color(0xFF121212),
-      //       ),
-      // ),
       themeMode: ThemeMode.light,
     );
   }

@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:tlaxcala_world/data_manager.dart';
-import 'database_helper.dart';
 import 'category_screen.dart'; // Import your CategoryScreen
 
 class MenuScreen extends StatefulWidget {
@@ -26,14 +25,7 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
 Future<void> _loadBusinessTypes() async {
-  final now = DateTime.now();
   final businessDataManager = BusinessDataManager();
-
-  // Decide data source
-  if (now.weekday == DateTime.friday || businessDataManager.getLastSyncedDate('business_data') == null) {
-    // Fetch from Firebase on Fridays or if no previous sync exists
-    await businessDataManager.fetchAndSaveBusinessData();
-  }
 
   // Load data from Hive
   final data = await businessDataManager.loadBusinessDataFromHive();
@@ -139,8 +131,9 @@ Future<void> _loadBusinessTypes() async {
             ),
           ),
           
-          const SizedBox(height:10),
-           Text(context.tr("Hire our service: 2463608618"))
+          const SizedBox(height:15),
+           Text(context.tr("Hire our service: 2463608618")),
+           const SizedBox(height:10),
         ],
       ),
     );
