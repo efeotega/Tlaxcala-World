@@ -7,6 +7,7 @@
     <application
         android:label="Lo-e"
         android:name="${applicationName}"
+         android:hardwareAccelerated="false"
         android:icon="@drawable/icon"
         android:roundIcon="@drawable/icon">
         <activity

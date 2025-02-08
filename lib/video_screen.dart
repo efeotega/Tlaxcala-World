@@ -1,8 +1,19 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:video_player/video_player.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: const AssetVideoPlayer(),
+    );
+  }
+}
 
 class AssetVideoPlayer extends StatefulWidget {
   const AssetVideoPlayer({super.key});
@@ -12,8 +23,10 @@ class AssetVideoPlayer extends StatefulWidget {
 }
 
 class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
-  late VideoPlayerController _controller;
+  Player? _player;
+  VideoController? _videoController;
   bool _isLoading = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -22,45 +35,30 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
   }
 
   Future<void> _initializeVideo() async {
+    const videoUrl =
+        'https://firebasestorage.googleapis.com/v0/b/mundotlaxcala.firebasestorage.app/o/VID-20241207-WA0109.mp4?alt=media&token=59fb9522-4cae-45b8-a736-efa46679ce6a';
+
     try {
-      const videoUrl =
-          'https://firebasestorage.googleapis.com/v0/b/mundotlaxcala.firebasestorage.app/o/vid.mp4?alt=media&token=01955181-1ebe-4afa-8018-00179c34ac86';
+      _player = Player();
+      _videoController = VideoController(_player!);
 
-      // Use the cache manager to download and cache the file
-      final file = await DefaultCacheManager().getSingleFile(videoUrl);
+      await _player!.open(Media(videoUrl), play: true);
 
-      // Initialize the video controller with the cached file
-      _controller = VideoPlayerController.file(file)
-        ..initialize().then((_) {
-          setState(() {
-            _isLoading = false;
-            _controller.play();
-            _controller.setLooping(true);
-            _controller.setVolume(0.0);
-            
-          });
-        });
-        if(kIsWeb){
-          _controller = VideoPlayerController.network(videoUrl)
-        ..initialize().then((_) {
-          setState(() {
-            _isLoading = false;
-            _controller.play();
-            _controller.setLooping(true);
-          });
-        });
-        }
-    } catch (error) {
       setState(() {
         _isLoading = false;
       });
-      print("Video caching or initialization error: $error");
+    } catch (error) {
+      print("Video initialization error: $error");
+      setState(() {
+        _isLoading = false;
+        _hasError = true;
+      });
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _player?.dispose();
     super.dispose();
   }
 
@@ -70,12 +68,15 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
       body: Center(
         child: _isLoading
             ? const CircularProgressIndicator()
-            : _controller.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  )
-                : const Text('Error loading video'),
+            : _hasError
+                ? const Text('Error loading video')
+                : AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Video(
+                      controller: _videoController!,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
       ),
     );
   }

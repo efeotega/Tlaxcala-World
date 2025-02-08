@@ -34,7 +34,7 @@ class DetailsScreen extends StatelessWidget {
           slivers: [
             SliverAppBar(
               
-              expandedHeight: 210,
+              expandedHeight: MediaQuery.of(context).size.width*0.8,
               pinned: true,
               actions: [
                 IconButton(
@@ -108,90 +108,83 @@ class DetailsScreen extends StatelessWidget {
   }
   /////
 
-
 Widget _buildImageGallery(BuildContext context, Business business) {
   final imageCount = business.imagePaths.length;
 
-  // For a few images, use a Row with dynamic width for each image.
-  if (imageCount <= 5) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Calculate available width, subtracting some margin space.
-        const horizontalPadding = 5.0; // total margin per image (adjust as needed)
-        // final tileWidth =
-        //     (constraints.maxWidth - ((imageCount + 1) * horizontalPadding)) /
-        //         imageCount;
-                final tileWidth=MediaQuery.of(context).size.width/imageCount;
-                final tileWidthh=tileWidth*0.9;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Padding(
-            padding: const EdgeInsets.all(5.0),
-            child: Row(
-              children: business.imagePaths.map((imageUrl) {
-                return Container(
-                  width: tileWidthh,
-                  margin: const EdgeInsets.all(5.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              FullScreenImagePage(imagePath: imageUrl),
-                        ),
-                      );
-                    },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12.0),
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Container(
-                            height: 150,
-                            alignment: Alignment.center,
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+  // For a few images, use a horizontal scrollable Row with fixed-width items.
+  if (imageCount ==1) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Padding(
+        padding: const EdgeInsets.all(5.0),
+        child: Row(
+          children: business.imagePaths.map((imageUrl) {
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        FullScreenImagePage(imagePath: imageUrl),
                   ),
                 );
-              }).toList(),
-            ),
-          ),
-        );
-      },
+              },
+              child: Container(
+                width: 300, // Fixed width for each image
+                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: AspectRatio(
+                    aspectRatio: 16 / 9, // Adjust as needed
+                    child: Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          alignment: Alignment.center,
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
 
   // For many images, use the MasonryGridView as before.
   return MasonryGridView.count(
-    padding: const EdgeInsets.all(5.0),
-    // Keep 2 rows for horizontal scrolling.
-    crossAxisCount: 2,
-    scrollDirection: Axis.horizontal,
-    mainAxisSpacing: 3,
-    crossAxisSpacing: 2,
-    itemCount: business.imagePaths.length,
-    itemBuilder: (context, index) {
-      final imageUrl = business.imagePaths[index];
-      return GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FullScreenImagePage(imagePath: imageUrl),
-            ),
-          );
-        },
+  padding: const EdgeInsets.all(5.0),
+  crossAxisCount: 2, // Two rows for horizontal scrolling
+  scrollDirection: Axis.horizontal,
+  mainAxisSpacing: 3,
+  crossAxisSpacing: 2,
+  itemCount: business.imagePaths.length,
+  itemBuilder: (context, index) {
+    final imageUrl = business.imagePaths[index];
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FullScreenImagePage(imagePath: imageUrl),
+          ),
+        );
+      },
+      child: Container(
+        // Set a fixed width and height for each item.
+        width:  MediaQuery.of(context).size.width*0.8,  // Adjust this value to increase or decrease the width
+        height: 300, // Adjust this value to increase or decrease the height
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12.0),
           child: Image.network(
@@ -200,7 +193,6 @@ Widget _buildImageGallery(BuildContext context, Business business) {
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return Container(
-                height: 150, // Temporary height for loading state
                 alignment: Alignment.center,
                 child: CircularProgressIndicator(
                   value: loadingProgress.expectedTotalBytes != null
@@ -212,9 +204,10 @@ Widget _buildImageGallery(BuildContext context, Business business) {
             },
           ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  },
+);
 }
 
 
@@ -372,20 +365,30 @@ Widget _buildSectionTitle(String title) {
 
 Widget _buildServiceChips(Business business) {
   return Wrap(
-    spacing:8,
-    runSpacing:8,
-    children:[
+    spacing: 8,
+    runSpacing: 8,
+    children: [
       Chip(
-        label:Text(business.services),
-        backgroundColor:Colors.blue[50],
-        labelStyle:const TextStyle(color:Color(0xFFF95B3D)),
-         shape: RoundedRectangleBorder(
+        backgroundColor: Colors.blue[50],
+        labelStyle: const TextStyle(color: Color(0xFFF95B3D)),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-      )
-    ]
+        label: Container(
+          // Set a max width to control horizontal growth.
+          constraints: const BoxConstraints(maxWidth: 200),
+          child: Text(
+            business.services,
+            maxLines: 100, // Change to 1 if you want a single line with ellipsis.
+            // overflow: TextOverflow.ellipsis,
+            softWrap: true,
+          ),
+        ),
+      ),
+    ],
   );
 }
+
 
 void _launchMap(BuildContext context, String locationLink) {
   launchUrl(Uri.parse(locationLink));

@@ -46,19 +46,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
   }
 
   Future<void> _loadFilteredBusinesses() async {
-    bool loadCompleted = false;
-    Timer slowLoadTimer = Timer(const Duration(seconds: 6), () async {
-      if (!loadCompleted) {
-        // Do something while loading is still in progress.
-        // For example, show a dialog to the user.
-
-        showSnackbar(
-            context, context.tr("Error loading details. Will reset now"));
-        await deleteAllHiveBoxes();
-        //print("taking time to load");
-      }
-    });
-
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       final now = DateTime.now();
@@ -142,18 +129,12 @@ class _CategoryScreenState extends State<CategoryScreen> {
       }
     } catch (e) {
       showSnackbar(context, 'Error loading filtered businesses: $e');
-    } finally {
-      // Mark the load as complete and cancel the timer if it's still active.
-      loadCompleted = true;
-      if (slowLoadTimer.isActive) {
-        slowLoadTimer.cancel();
-      }
-    }
+    } finally {}
   }
 
   Future<void> _applySorting() async {
     setState(() {
-      isLoading = true;
+      // isLoading = true;
       switch (_sortCriterion) {
         case 'Date':
           _filteredBusinesses
@@ -300,200 +281,228 @@ class _CategoryScreenState extends State<CategoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF270949),
-        title: Text(
-          context.tr(widget.category),
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.sort, color: Colors.white),
-            onPressed: () => _showSortDialog(),
-          ),
-        ],
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: Column(
-        children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                labelText: context.tr('Search'),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                prefixIcon: const Icon(Icons.search),
-              ),
-              onChanged: (query) {
-                setState(() {
-                  _searchQuery = query;
-                });
-                _loadFilteredBusinesses();
-              },
-            ),
-          ),
-
-          // Loading State
-          if (_filteredBusinesses.isEmpty)
-            const Expanded(
-              child: Center(
-                child: CircularProgressIndicator(),
+      body: SafeArea(
+        // Ensures content doesn't overlap system UI
+        child: Column(
+          children: [
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: context.tr('Search'),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        prefixIcon: const Icon(Icons.search),
+                      ),
+                      onChanged: (query) {
+                        setState(() {
+                          _searchQuery = query;
+                        });
+                        _loadFilteredBusinesses();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  IconButton(
+                    icon: const Icon(Icons.sort, color: Color(0xFF270949)),
+                    onPressed: () => _showSortDialog(),
+                  ),
+                ],
               ),
             ),
 
-          // Business List
-          if (_filteredBusinesses.isNotEmpty)
-            isLoading
-                ? const CircularProgressIndicator()
-                : Expanded(
-                    child: ListView.builder(
-                      itemCount: _filteredBusinesses.length,
-                      itemBuilder: (context, index) {
-                        final business = _filteredBusinesses[index];
-                        var imagePathh = "";
-                        for (String imagePath in business.imagePaths.take(1)) {
-                          if (imagePath != "") {
-                            imagePathh = imagePath;
-                          }
-                        }
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filteredBusinesses.isEmpty
+                      ? const Center(child: Text("No businesses found."))
+                      : ListView.builder(
+                          physics:
+                              const AlwaysScrollableScrollPhysics(), // Forces scrolling even if content is less
+                          itemCount: _filteredBusinesses.length,
+                          itemBuilder: (context, index) {
+                            final business = _filteredBusinesses[index];
+                            var imagePathh = "";
+                            for (String imagePath
+                                in business.imagePaths.take(1)) {
+                              if (imagePath.isNotEmpty) {
+                                imagePathh = imagePath;
+                              }
+                            }
 
-                        return GestureDetector(
-                          onTap: () => _navigateToDetailsScreen(business),
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(
-                                vertical: 8.0, horizontal: 16.0),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12.0),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.2),
-                                  spreadRadius: 1,
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Image Section
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(12.0),
-                                    bottomLeft: Radius.circular(12.0),
-                                  ),
-                                  child: SizedBox(
-                                    width: 120,
-                                    height: 150,
-                                    child: Image.network(
-                                      imagePathh,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Container(
-                                          color: Colors.grey[200],
-                                          child: const Center(
-                                            child: Icon(
-                                                Icons.image_not_supported,
-                                                color: Colors.grey),
-                                          ),
-                                        );
-                                      },
+                            return GestureDetector(
+                              onTap: () => _navigateToDetailsScreen(business),
+                              child: Column(
+                                children: [
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        vertical: 8.0, horizontal: 16.0),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
                                     ),
-                                  ),
-                                ),
-
-                                // Details Section
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Column(
+                                    child: Row(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                          CrossAxisAlignment.center,
                                       children: [
-                                        Text(
-                                          business.name,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyLarge
-                                              ?.copyWith(
-                                                color: const Color(0xFF270949),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.location_on,
-                                                size: 16, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                business.municipal,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                        color: Colors.grey),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.event,
-                                                size: 16, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Expanded(
-                                              child: Text(
-                                                business.eventDate,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                        color: Colors.grey),
-                                                overflow: TextOverflow
-                                                    .ellipsis, // Adds "..." if the text overflows
-                                                maxLines:
-                                                    1, // Limits the text to a single line
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            const Icon(Icons.access_time,
-                                                size: 16, color: Colors.grey),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              '${context.tr('Schedule')}: ${business.openingHours}',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
+                                        // Image Section
+                                        SizedBox(
+                                          width: 150,
+                                          height: 175,
+                                          child: Image.network(
+                                            imagePathh,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey[200],
+                                                child: const Center(
+                                                  child: Icon(
+                                                      Icons.image_not_supported,
                                                       color: Colors.grey),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+
+                                        // Details Section
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(10.0),
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                // Business Name (Always shown)
+                                                Text(
+                                                  business.name,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodyLarge
+                                                      ?.copyWith(
+                                                        fontSize: 20,
+                                                        color: const Color(
+                                                            0xFF270949),
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                ),
+
+                                                // Municipal Row (Only if non-empty)
+                                                if (business.municipal
+                                                    .trim()
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 10),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.location_on,
+                                                          size: 16,
+                                                          color: Colors.black),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          business.municipal,
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                    fontSize:
+                                                                        14,
+                                                                    color: Colors
+                                                                        .black,
+                                                                  ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+
+                                                // Event Date Row (Only if non-empty)
+                                                if (business.eventDate
+                                                    .trim()
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 10),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(Icons.event,
+                                                          size: 16,
+                                                          color: Colors.black),
+                                                      const SizedBox(width: 4),
+                                                      Expanded(
+                                                        child: Text(
+                                                          business.eventDate,
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .bodySmall
+                                                                  ?.copyWith(
+                                                                    fontSize:
+                                                                        14,
+                                                                    color: Colors
+                                                                        .black,
+                                                                  ),
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          maxLines: 1,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+
+                                                // Schedule Row (Only if openingHours is non-empty)
+                                                if (business.openingHours
+                                                    .trim()
+                                                    .isNotEmpty) ...[
+                                                  const SizedBox(height: 10),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(
+                                                          Icons.access_time,
+                                                          size: 16,
+                                                          color: Colors.black),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        '${context.tr('Schedule')}: ${business.openingHours}',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodySmall
+                                                            ?.copyWith(
+                                                              fontSize: 14,
+                                                              color:
+                                                                  Colors.black,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
                                             ),
-                                          ],
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-        ],
+                                  const Divider(thickness: 0.1),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
