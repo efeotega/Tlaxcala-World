@@ -48,7 +48,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
     googleSignInLoading = true;
   });
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
   UserCredential userCredential;
   try {
     if (kIsWeb) {
@@ -88,7 +88,7 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
         print('User is already registered.');
       } else {
         print('New user. Adding to Firestore...');
-        await _firestore.collection('users').doc(user.uid).set({
+        await firestore.collection('users').doc(user.uid).set({
           'email': email,
           'createdAt': Timestamp.now(),
         });
@@ -108,10 +108,10 @@ class _UserRegistrationScreenState extends State<UserRegistrationScreen> {
 }
 
   Future<bool> checkIfUserExists(String email) async {
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
     try {
       // Query the 'users' collection where 'email' field matches the input
-      final QuerySnapshot result = await _firestore
+      final QuerySnapshot result = await firestore
           .collection('users')
           .where('email', isEqualTo: email)
           .limit(1)

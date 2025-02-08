@@ -5,9 +5,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
-import 'package:tlaxcala_world/video_screen.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:tlaxcala_world/firebase_methods.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tlaxcala_world/forgot_password_page.dart';
 
@@ -39,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
      Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ForgotPasswordPage(),
+                    builder: (context) => const ForgotPasswordPage(),
                   ),
                 );
   }
@@ -113,7 +110,7 @@ Future<void> _signOutUser() async {
     setState(() {
       googleSignInLoading = true;
     });
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
     UserCredential userCredential;
     try {
       if (kIsWeb) {
@@ -150,7 +147,7 @@ Future<void> _signOutUser() async {
         } else {
           print('New user. You can add user to Firestore.');
           // Add the user to Firestore if needed
-          await _firestore.collection('users').doc(user.uid).set({
+          await firestore.collection('users').doc(user.uid).set({
             'email': user.email,
             'createdAt': Timestamp.now(),
           });
@@ -168,10 +165,10 @@ Future<void> _signOutUser() async {
   }
 
   Future<bool> checkIfUserExists(String email) async {
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
     try {
       // Query the 'users' collection where 'email' field matches the input
-      final QuerySnapshot result = await _firestore
+      final QuerySnapshot result = await firestore
           .collection('users')
           .where('email', isEqualTo: email)
           .limit(1)
@@ -373,7 +370,7 @@ Future<void> _signOutUser() async {
                 // ),
                 // const SizedBox(height: 20),
 
-                Row(
+                const Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     // ElevatedButton.icon(

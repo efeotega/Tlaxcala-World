@@ -3,7 +3,6 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:tlaxcala_world/edit_business_screen.dart';
 import 'package:tlaxcala_world/firebase_methods.dart';
-import 'database_helper.dart';
 import 'business_model.dart';
 
 class DeleteBusinessScreen extends StatefulWidget {
@@ -23,11 +22,11 @@ class _DeleteBusinessScreenState extends State<DeleteBusinessScreen> {
   }
 
 Future<void> _loadBusinesses() async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   try {
     // Query Firestore for businesses collection
-    QuerySnapshot querySnapshot = await _firestore.collection('businesses').get();
+    QuerySnapshot querySnapshot = await firestore.collection('businesses').get();
     // Map Firestore documents to Business objects
     setState(() {
       _businesses = querySnapshot.docs.map((doc) {
@@ -125,7 +124,7 @@ Future<void> _loadBusinesses() async {
                           IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () =>
-                                _showDeleteConfirmationDialog(business.id!),
+                                _showDeleteConfirmationDialog(business.id),
                           ),
                         ],
                       ),

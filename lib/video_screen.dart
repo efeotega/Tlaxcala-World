@@ -5,7 +5,7 @@ import 'package:video_player/video_player.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class AssetVideoPlayer extends StatefulWidget {
-  const AssetVideoPlayer({Key? key}) : super(key: key);
+  const AssetVideoPlayer({super.key});
 
   @override
   State<AssetVideoPlayer> createState() => _AssetVideoPlayerState();
@@ -23,7 +23,7 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
 
   Future<void> _initializeVideo() async {
     try {
-      final videoUrl =
+      const videoUrl =
           'https://firebasestorage.googleapis.com/v0/b/mundotlaxcala.firebasestorage.app/o/vid.mp4?alt=media&token=01955181-1ebe-4afa-8018-00179c34ac86';
 
       // Use the cache manager to download and cache the file
@@ -36,6 +36,8 @@ class _AssetVideoPlayerState extends State<AssetVideoPlayer> {
             _isLoading = false;
             _controller.play();
             _controller.setLooping(true);
+            _controller.setVolume(0.0);
+            
           });
         });
         if(kIsWeb){

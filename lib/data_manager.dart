@@ -4,6 +4,7 @@ import 'business_model.dart';
 
 class BusinessDataManager {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String date = DateTime.now().toIso8601String().split('T').first;
 
   /// Open a Hive box
   Future<Box> _openBox(String name) async {
@@ -14,7 +15,7 @@ class BusinessDataManager {
   }
 
   /// Fetch data from Firebase and save locally in Hive
-  Future<void> fetchAndSaveBusinessData() async {
+  Future<void> fetchAndSaveBusinessData(String date) async {
     try {
       // Fetch unique business types from Firestore
       final businessTypesSnapshot = await _firestore.collection('businesses').get();
@@ -40,18 +41,20 @@ class BusinessDataManager {
       }
 
       // Save data locally
-      final box = await _openBox('business_data');
+      
+      final box = await _openBox('business_data_$date');
+
       box.put('businessTypes', businessTypes);
       box.put('categoriesByType', categoriesByType);
-      box.put('lastSynced', DateTime.now().toIso8601String());
+      //box.put('lastSynced',  DateTime.now().toUtc().toIso8601String());
     } catch (e) {
       print('Error loading business types and categories from Firebase: $e');
     }
-  }
-
-  /// Load business data, preferring Hive unless data is missing or today is Friday
+  } /// Load business data, preferring Hive unless data is missing or today is Friday
   Future<Map<String, dynamic>> loadBusinessDataFromHive() async {
-  final box = await _openBox('business_data');
+    String date=this.date;
+  final box = await _openBox('business_data_$date');
+
 
   // Safely cast business types to List<String>
   final businessTypes = (box.get('businessTypes') as List<dynamic>?)?.cast<String>() ?? [];
@@ -65,15 +68,15 @@ class BusinessDataManager {
     ),
   );
 
-  final now = DateTime.now();
 
-  // Check if today is Friday or data is missing
-  if (now.weekday == DateTime.friday || businessTypes.isEmpty || categoriesByType.isEmpty) {
-    print('Fetching data from Firebase...');
-    await fetchAndSaveBusinessData();
+  // Check if server was checked today or data is missing
+  if (businessTypes.isEmpty || categoriesByType.isEmpty) {
+    print("fetching data from firebase...");
+    await fetchAndSaveBusinessData(date);
 
     // Reload data after fetching
-    final updatedBox = await _openBox('business_data');
+    final updatedBox = await _openBox('business_data_$date');
+
     final updatedBusinessTypes =
         (updatedBox.get('businessTypes') as List<dynamic>?)?.cast<String>() ?? [];
     final updatedRawCategoriesByType = updatedBox.get('categoriesByType') as Map<dynamic, dynamic>? ?? {};
@@ -82,43 +85,43 @@ class BusinessDataManager {
         key as String,
         (value as List<dynamic>).cast<String>(),
       ),
-    );
-
+     );
+    // await setServerChecked();
+    
     // Ensure data is valid after fetching
-    if (updatedBusinessTypes.isNotEmpty && updatedCategoriesByType.isNotEmpty) {
+    if (updatedBusinessTypes.isNotEmpty && 
+    updatedCategoriesByType.isNotEmpty) {
       return {
         'businessTypes': updatedBusinessTypes,
         'categoriesByType': updatedCategoriesByType,
       };
     } else {
-      throw Exception('Failed to fetch data from Firebase.');
+     return{
+      'businessTypes': updatedBusinessTypes,
+        'categoriesByType': updatedCategoriesByType,
+     };
     }
+    
   }
-
+  else{
+    print("Hive box found");
+  }
   // Return Hive data if valid
   return {
     'businessTypes': businessTypes,
     'categoriesByType': categoriesByType,
   };
 }
-
-  /// Get last sync date
-  Future<DateTime?> getLastSyncedDate(String name) async {
-    final box = await _openBox(name);
-    final lastSynced = box.get('lastSynced');
-    return lastSynced != null ? DateTime.parse(lastSynced) : null;
-  }
-
   Future<void> loadFilteredBusinessesFromHive(String businessType,String category) async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final now = DateTime.now();
-  final hiveBoxName = 'filtered_businesses_${businessType}_${category}';
-
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final hiveBoxName = 'filtered_businesses_${businessType}_$category';
+  
   try {
     // Determine the data source
-    if (now.weekday == DateTime.friday || !(await Hive.boxExists(hiveBoxName))) {
+    if ((!await Hive.boxExists(hiveBoxName))) {
+          print("FETCHING FROM FIREBASE");
       // Fetch from Firebase
-      final querySnapshot = await _firestore
+      final querySnapshot = await firestore
           .collection('businesses')
           .where('businessType', isEqualTo: businessType)
           .where('category', isEqualTo: category)
@@ -155,19 +158,12 @@ class BusinessDataManager {
       // Save to Hive
       final box = await Hive.openBox(hiveBoxName);
       await box.put('businesses', businesses.map((b) => b.toJson()).toList());
-      await box.put('lastSynced', now.toIso8601String());
+      //await box.put('lastSynced',  DateTime.now().toUtc().toIso8601String());
 
       // Update UI
       
     } else {
-      // Fetch from Hive
-      final box = await Hive.openBox(hiveBoxName);
-      final savedBusinesses = box.get('businesses', defaultValue: []);
-      final businesses = (savedBusinesses as List<dynamic>)
-          .map((json) =>
-              Business.fromJson(Map<String, dynamic>.from(json as Map)))
-          .toList();
-
+      print("FETCHING FROM ALREADY SAVED DATA");
       
     }
   } catch (e) {

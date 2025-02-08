@@ -1,16 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:tlaxcala_world/feedback/feedback_methods.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:tlaxcala_world/full_screen_image.dart';
 import 'business_model.dart';
-import 'database_helper.dart';
-import 'package:image_picker/image_picker.dart';
 
 class EditBusinessScreen extends StatefulWidget {
   final Business business;
@@ -127,8 +124,43 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     );
   }
 
+  bool isLocationLinkValid(String link) {
+    try {
+      // Updated regex: requires at least one character between '/place/' and '@'
+      final regex = RegExp(
+        r'https:\/\/www\.google\.com\/maps\/place\/[^@\/]+@([-.\d]+),([-.\d]+)',
+      );
+
+      // Check if the link matches the expected structure
+      final match = regex.firstMatch(link);
+      if (match == null) {
+        return false; // Link does not match the expected format
+      }
+
+      // Extract latitude and longitude
+      double lat = double.parse(match.group(1)!);
+      double lng = double.parse(match.group(2)!);
+
+      // Validate the latitude and longitude ranges
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        return false;
+      }
+
+      // If all checks pass, the link is valid
+      return true;
+    } catch (e) {
+      // In case of any error, consider the link invalid
+      print('Error validating link: $e');
+      return false;
+    }
+  }
+
   Future<void> _saveBusiness() async {
-    final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+    if (!isLocationLinkValid(_locationLinkController.text.trim())) {
+      showSnackbar(context, context.tr('location link is invalid'));
+      return;
+    }
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
     // Create the updated business object
     final updatedBusiness = widget.business.copyWith(
@@ -152,7 +184,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
 
     try {
       // Assume `businessId` or `documentId` is stored in the `Business` object
-      await _firestore.collection('businesses').doc(widget.business.id).update({
+      await firestore.collection('businesses').doc(widget.business.id).update({
         'name': updatedBusiness.name,
         'review': updatedBusiness.review,
         'eventDate': updatedBusiness.eventDate,
@@ -173,7 +205,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
 
       // Show a success message
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Business Updated Successfully')),
+        const SnackBar(content: Text('Business Updated Successfully')),
       );
 
       // Navigate to another page after updating
@@ -236,24 +268,55 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     }
   }
 
- Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-  List<Widget> widgets = [];
+  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
+    List<Widget> widgets = [];
 
-  void _removeImage(int index, bool isFromBytes) {
-    setState(() {
-      if (isFromBytes) {
-        _imageBytes.removeAt(index);
-      } else {
-        _imagePaths.removeAt(index);
+    void removeImage(int index, bool isFromBytes) {
+      setState(() {
+        if (isFromBytes) {
+          _imageBytes.removeAt(index);
+        } else {
+          _imagePaths.removeAt(index);
+        }
+      });
+    }
+
+    if (kIsWeb) {
+      // Build widgets for web images
+      if (_imagePaths.isEmpty) {
+        for (int i = 0; i < _imageBytes.length; i++) {
+          final bytes = _imageBytes[i];
+          widgets.add(
+            Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.0),
+                    child: Image.memory(
+                      bytes,
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: () => removeImage(i, true),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
       }
-    });
-  }
 
-  if (kIsWeb) {
-    // Build widgets for web images
-    if (_imagePaths.isEmpty) {
-      for (int i = 0; i < _imageBytes.length; i++) {
-        final bytes = _imageBytes[i];
+      for (int i = 0; i < _imagePaths.length; i++) {
+        final path = _imagePaths[i];
         widgets.add(
           Stack(
             children: [
@@ -261,11 +324,18 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                 padding: const EdgeInsets.only(right: 8.0),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8.0),
-                  child: Image.memory(
-                    bytes,
+                  child: Image.network(
+                    path,
                     width: 100,
                     height: 100,
-                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.memory(
+                        _imageBytes.isNotEmpty ? _imageBytes[i] : Uint8List(0),
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -274,7 +344,45 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                 right: 4,
                 child: IconButton(
                   icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: () => _removeImage(i, true),
+                  onPressed: () => removeImage(i, false),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+    } else {
+      // Build widgets for mobile images
+      for (int i = 0; i < _imagePaths.length; i++) {
+        final path = _imagePaths[i];
+        widgets.add(
+          Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.network(
+                    path,
+                    width: 100,
+                    height: 100,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.file(
+                        File(path),
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      );
+                    },
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () => removeImage(i, false),
                 ),
               ),
             ],
@@ -283,84 +391,8 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       }
     }
 
-    for (int i = 0; i < _imagePaths.length; i++) {
-      final path = _imagePaths[i];
-      widgets.add(
-        Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(
-                  path,
-                  width: 100,
-                  height: 100,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.memory(
-                      _imageBytes.isNotEmpty ? _imageBytes[i] : Uint8List(0),
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    );
-                  },
-                ),
-              ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => _removeImage(i, false),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-  } else {
-    // Build widgets for mobile images
-    for (int i = 0; i < _imagePaths.length; i++) {
-      final path = _imagePaths[i];
-      widgets.add(
-        Stack(
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.network(
-                  path,
-                  width: 100,
-                  height: 100,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Image.file(
-                      File(path),
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    );
-                  },
-                ),
-              ),
-            ),
-            Positioned(
-              top: 4,
-              right: 4,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.red),
-                onPressed: () => _removeImage(i, false),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+    return widgets;
   }
-
-  return widgets;
-}
 
   Map<String, List<String>> businessCategories = {
     'Cinema': ['Billboards', 'Cinemas'],
@@ -538,7 +570,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               Row(
                 children: [
                   Text(context.tr('Photos')),
-                  Spacer(),
+                  const Spacer(),
                   TextButton(
                       onPressed: () {
                         _pickImages();

@@ -1,10 +1,11 @@
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:tlaxcala_world/feedback/feedback_methods.dart'; // For formatting the createdAt timestamp
 
 class UsersPage extends StatefulWidget {
+  const UsersPage({super.key});
+
   @override
   _UsersPageState createState() => _UsersPageState();
 }
@@ -57,14 +58,14 @@ class _UsersPageState extends State<UsersPage> {
         title: Text(context.tr('users_page')),
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Text(
                     '${context.tr('total_users')}: ${_users.length}',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
                 Expanded(
@@ -73,7 +74,7 @@ class _UsersPageState extends State<UsersPage> {
                     itemBuilder: (context, index) {
                       final user = _users[index];
                       return ListTile(
-                        leading: Icon(Icons.person),
+                        leading: const Icon(Icons.person),
                         title: Text(user['email']),
                         subtitle: Text(
                           '${context.tr('created_at')}: ${_formatDate(user['createdAt'])}',

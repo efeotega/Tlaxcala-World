@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 class LongPressButton extends StatefulWidget {
-  const LongPressButton({Key? key}) : super(key: key);
+  const LongPressButton({super.key});
 
   @override
   _LongPressButtonState createState() => _LongPressButtonState();

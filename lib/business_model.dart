@@ -12,7 +12,7 @@ class Business {
   final String opinions;
   final String whatsapp;
   final String promotions;
-  final String locationLink;
+   String locationLink;
   final String facebookPage;
   final String website;
   final String eventDate;
@@ -200,4 +200,62 @@ class Business {
       imagePaths: json['imagePaths'] as List<dynamic>,
     );
   }  
+   /// Serialize to query parameters
+  
+  /// Deserialize from query parameters
+  factory Business.fromQueryParameters(Map<String, String> params) {
+    return Business(
+      id: params['id'] ?? '',
+      name: params['name'] ?? '',
+      municipal: params['municipal'] ?? '',
+      businessType: params['businessType'] ?? '',
+      category: params['category'] ?? '',
+      review: params['review']??'',
+      phone: params['phone'] ?? '',
+      address: params['address'] ?? '',
+      services: params['services'] ?? '',
+      addedValue: params['addedValue'] ?? '',
+      opinions: params['opinion']??'',
+      whatsapp: params['whatsapp'] ?? '',
+      promotions: params['promotions'] ?? '',
+      locationLink: params['locationLink'] ?? '',
+      facebookPage: params['facebookPage'] ?? '',
+      website: params['website'] ?? '',
+      eventDate: params['eventDate'] ?? '',
+      openingHours: params['openingHours'] ?? '',
+      closingHours: params['closingHours'] ?? '',
+      prices: params['prices'] ?? '',
+      imagePaths: (params['imagePaths'] ?? '').split(','),
+    );
+  }
+}
+
+extension BusinessToQueryParameters on Business {
+  String toQueryParameters() {
+    return Uri(
+      queryParameters: {
+        'id': id,
+        'name': name,
+        'municipal': municipal,
+        'businessType': businessType,
+        'category': category,
+        'review': review,
+        'phone': phone,
+        'address': address,
+        'services': services,
+        'addedValue': addedValue,
+        'opinions': opinions,
+        'whatsapp': whatsapp,
+        'promotions': promotions,
+        'locationLink': locationLink,
+        'facebookPage': facebookPage,
+        'website': website,
+        'eventDate': eventDate,
+        'openingHours': openingHours,
+        'closingHours': closingHours,
+        'prices': prices,
+        'imagePaths': imagePaths.join(','),
+      },
+    ).query; // returns the query string
+  }
 }

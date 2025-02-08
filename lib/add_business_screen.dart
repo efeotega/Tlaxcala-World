@@ -6,11 +6,11 @@ import 'dart:typed_data'; // For Uint8List
 import 'dart:io' show File; // For File on mobile
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:tlaxcala_world/business_model.dart';
+
+import 'package:tlaxcala_world/feedback/feedback_methods.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:tlaxcala_world/firebase_methods.dart';
-import 'package:tlaxcala_world/full_screen_image.dart';
 
 class AddBusinessScreen extends StatefulWidget {
   const AddBusinessScreen({super.key});
@@ -141,7 +141,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.add, size: 30),
-          onPressed: () => _addNewItem(context, 'Business Type'),
+          onPressed: () => _addNewItem(context, context.tr('Business Type')),
         ),
       ],
     );
@@ -174,7 +174,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.add, size: 30),
-                onPressed: () => _addNewItem(context, 'Category'),
+                onPressed: () => _addNewItem(context, context.tr('Category')),
               ),
             ],
           )
@@ -343,6 +343,36 @@ Future<void> _pickImages() async {
     'Service': ['Photos and Videos', 'Weddings', 'XV', 'Real Estate'],
     'Newspapers': ['Sports', 'Local', 'National'],
   };
+bool isLocationLinkValid(String link) {
+  try {
+    // Updated regex: requires at least one character between '/place/' and '@'
+    final regex = RegExp(
+      r'https:\/\/www\.google\.com\/maps\/place\/[^@\/]+@([-.\d]+),([-.\d]+)',
+    );
+
+    // Check if the link matches the expected structure
+    final match = regex.firstMatch(link);
+    if (match == null) {
+      return false; // Link does not match the expected format
+    }
+
+    // Extract latitude and longitude
+    double lat = double.parse(match.group(1)!);
+    double lng = double.parse(match.group(2)!);
+
+    // Validate the latitude and longitude ranges
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return false;
+    }
+
+    // If all checks pass, the link is valid
+    return true;
+  } catch (e) {
+    // In case of any error, consider the link invalid
+    print('Error validating link: $e');
+    return false;
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -471,6 +501,10 @@ Future<void> _pickImages() async {
                       setState(() {
                         isLoading = true;
                       });
+                      if(!isLocationLinkValid(_locationLinkController.text.trim())){
+                         showSnackbar(context, context.tr('location link is invalid'));
+                        return;
+                      }
                       // Save business to database
                       await saveBusinessData(
                           Business(

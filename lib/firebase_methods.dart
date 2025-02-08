@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:tlaxcala_world/business_model.dart';
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
@@ -79,36 +80,51 @@ Future<dynamic> createUser(
   }
 }
 Future<void> deleteBusiness(BuildContext context,String businessId) async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   try {
     // Delete the document with the specified ID from the 'businesses' collection
-    await _firestore.collection('businesses').doc(businessId).delete();
+    await firestore.collection('businesses').doc(businessId).delete();
 
     showSnackbar(context,"Business deleted successfully.");
   } catch (e) {
     print("Failed to delete business: $e");
   }
 }
-
 Future<void> saveBusinessData(Business business, BuildContext context) async {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseStorage storage = FirebaseStorage.instance;
 
   try {
     // Upload images and retrieve URLs
+    // On mobile, business.imagePaths is expected to be List<String> (file paths)
+    // On web, it might be List<Uint8List> (binary data)
     List<dynamic> imagePaths = business.imagePaths;
     List<String> uploadedImageUrls = [];
 
-    for (String path in imagePaths) {
-      File file = File(path);
-      String fileName = path.split('/').last;
+    for (var image in imagePaths) {
+      String fileName;
+      UploadTask uploadTask;
+      Reference storageRef;
+      TaskSnapshot snapshot;
+      
+      if (kIsWeb) {
+        // On web: image is assumed to be Uint8List
+        Uint8List imageData = image as Uint8List;
+        // You may want to generate a unique file name, for example using a timestamp:
+        fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        storageRef = storage.ref().child('business_images/$fileName');
+        uploadTask = storageRef.putData(imageData);
+      } else {
+        // On mobile: image is assumed to be a file path (String)
+        String path = image as String;
+        File file = File(path);
+        fileName = path.split('/').last;
+        storageRef = storage.ref().child('business_images/$fileName');
+        uploadTask = storageRef.putFile(file);
+      }
 
-      // Upload to Firebase Storage
-      Reference storageRef = _storage.ref().child('business_images/$fileName');
-      UploadTask uploadTask = storageRef.putFile(file);
-      TaskSnapshot snapshot = await uploadTask;
-
+      snapshot = await uploadTask;
       // Get the download URL
       String downloadUrl = await snapshot.ref.getDownloadURL();
       uploadedImageUrls.add(downloadUrl);
@@ -116,9 +132,9 @@ Future<void> saveBusinessData(Business business, BuildContext context) async {
 
     // Save business data to Firestore
     // Create a new document reference
-    final docRef = _firestore.collection('businesses').doc();
+    final docRef = firestore.collection('businesses').doc();
 
-// Save business data with the document ID
+    // Save business data with the document ID
     await docRef.set({
       'id': docRef.id, // Add the document ID as 'id' field
       'name': business.name,
@@ -145,12 +161,17 @@ Future<void> saveBusinessData(Business business, BuildContext context) async {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.tr('Business successfully registered.')),
+      const SnackBar(
+        content: Text("Business successfully registered."),
       ),
     );
     Navigator.pop(context);
   } catch (e) {
     print("Error saving business data: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Error saving business data."),
+      ),
+    );
   }
 }
