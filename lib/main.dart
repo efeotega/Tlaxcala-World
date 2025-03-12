@@ -16,8 +16,6 @@ import 'user_registration_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:media_kit/media_kit.dart';
-import 'package:media_kit_video/media_kit_video.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
@@ -73,7 +71,6 @@ Future<void> deleteOldHiveBoxes() async {
 }
 
 void main() async {
-  MediaKit.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   await deleteOldHiveBoxes();

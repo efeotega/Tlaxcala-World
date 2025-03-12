@@ -141,7 +141,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.add, size: 30),
-          onPressed: () => _addNewItem(context, context.tr('Business Type')),
+          onPressed: () => _addNewItem(context, 'Business Type'),
         ),
       ],
     );
@@ -174,7 +174,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
               ),
               IconButton(
                 icon: const Icon(Icons.add, size: 30),
-                onPressed: () => _addNewItem(context, context.tr('Category')),
+                onPressed: () => _addNewItem(context, 'Category'),
               ),
             ],
           )
@@ -345,30 +345,18 @@ Future<void> _pickImages() async {
   };
 bool isLocationLinkValid(String link) {
   try {
-    // Updated regex: requires at least one character between '/place/' and '@'
     final regex = RegExp(
-      r'https:\/\/www\.google\.com\/maps\/place\/[^@\/]+@([-.\d]+),([-.\d]+)',
+      r'https:\/\/www\.google\.com\/maps\/place\/[^@]+\/@([-.\d]+),([-.\d]+)(?:,\d+z)?'
     );
-
-    // Check if the link matches the expected structure
+    
     final match = regex.firstMatch(link);
-    if (match == null) {
-      return false; // Link does not match the expected format
-    }
-
-    // Extract latitude and longitude
+    if (match == null) return false;
+    
     double lat = double.parse(match.group(1)!);
     double lng = double.parse(match.group(2)!);
-
-    // Validate the latitude and longitude ranges
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-      return false;
-    }
-
-    // If all checks pass, the link is valid
-    return true;
+    
+    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
   } catch (e) {
-    // In case of any error, consider the link invalid
     print('Error validating link: $e');
     return false;
   }

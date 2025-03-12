@@ -9,8 +9,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_core
   firebase_storage
   geolocator_windows
-  media_kit_video
-  screen_brightness_windows
   share_plus
   url_launcher_windows
 )

@@ -23,7 +23,25 @@ class _MenuScreenState extends State<MenuScreen> {
     logAppVisit();
     _loadBusinessTypes();
   }
-
+final colorMap = {
+  "Hotels": const Color(0xFF4CAF50), // Green
+  "Cinema": const Color(0xFF2196F3), // Blue
+  "Restaurants": const Color(0xFFFFC107), // Amber
+  "Clubs and Bars": const Color(0xFF9C27B0), // Purple
+  "Art and Culture": const Color(0xFF795548), // Brown
+  "Conferences and Exhibitions": const Color(0xFF607D8B), // Blue Grey
+  "Schools": const Color(0xFF009688), // Teal
+  "Gyms": const Color(0xFF3F51B5), // Indigo
+  "Parties": const Color(0xFFE91E63), // Pink
+  "Theater": const Color(0xFF00BCD4), // Cyan
+  "Events": const Color(0xFFCDDC39), // Lime
+  "Dances and Concerts": const Color(0xFFFF5722), // Deep Orange
+  "Doctors and Hospitals": const Color(0xFF8BC34A), // Light Green
+  "Consultancies": const Color(0xFF673AB7), // Deep Purple
+  "Beauty": const Color(0xFFF44336), // Red
+  "Service": const Color(0xFF03A9F4), // Light Blue
+  "Newspapers": const Color(0xFF9E9E9E), // Grey
+};
   Future<void> _loadBusinessTypes() async {
     final businessDataManager = BusinessDataManager();
     final data = await businessDataManager.loadBusinessDataFromHive();
@@ -101,8 +119,9 @@ class _MenuScreenState extends State<MenuScreen> {
                         _navigateToCategoryScreen(businessType, category);
                       },
                       child: Container(
+                        padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
-                          color:Color(0xFFF95B3D),
+                          color: colorMap[businessType] ?? const Color(0xFFF95B3D),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
                         ),
@@ -152,67 +171,74 @@ class _MenuScreenState extends State<MenuScreen> {
       //   backgroundColor: const Color(0xFFF95B3D),
       //   elevation: 4,
       // ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: context.tr('Search services...'),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF270949)),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-              ),
-              onChanged: (value) => setState(() => _searchQuery = value),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 0.8,
-                ),
-                itemCount: filteredBusinessTypes.length,
-                itemBuilder: (context, index) {
-                  final businessType = filteredBusinessTypes[index];
-                  return GestureDetector(
-                    onTap: () => _showCategoryDialog(businessType),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color:Color(0xFFF95B3D),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
-                      ),
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Text(
-                              context.tr(businessType),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            children: [
+              const SizedBox(height:15),
+               Padding(
+                padding: const EdgeInsets.all(0.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        decoration: InputDecoration(
+                          labelText: context.tr('Search'),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
                           ),
-                          Positioned(
-                            bottom: 8,
-                            right: 8,
-                            child: getLeadingIcon(businessType),
-                          ),
-                        ],
+                          prefixIcon: const Icon(Icons.search),
+                        ),
+                        onChanged: (value) => setState(() => _searchQuery = value),
                       ),
                     ),
-                  );
-                },
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemCount: filteredBusinessTypes.length,
+                  itemBuilder: (context, index) {
+                    final businessType = filteredBusinessTypes[index];
+                    return GestureDetector(
+                      onTap: () => _showCategoryDialog(businessType),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: colorMap[businessType] ?? const Color(0xFFF95B3D),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
+                        ),
+                        child: Stack(
+                          children: [
+                            Center(
+                              child: Text(
+                                context.tr(businessType),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 8,
+                              right: 8,
+                              child: getLeadingIcon(businessType),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

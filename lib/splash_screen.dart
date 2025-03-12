@@ -33,18 +33,22 @@ class SplashScreen extends StatelessWidget {
         future: loadData(), // Load the data while displaying the splash screen
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
+            return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const SizedBox(height: 20),
-                  kIsWeb
-                      ? Image.asset("assets/logo.jpg")
-                      : const SizedBox(
+                  // const SizedBox(height: 20),
+                  // kIsWeb
+                  //     ? Image.asset("assets/logo.jpg")
+                  //     : const SizedBox(
+                  //         height: 300,
+                  //         child: AssetVideoPlayer(),
+                  //       ),
+                  SizedBox(
                           height: 300,
                           child: AssetVideoPlayer(),
                         ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
                 ],
               ),
             );
@@ -53,7 +57,7 @@ class SplashScreen extends StatelessWidget {
               child: Text('Error: ${snapshot.error}'),
             );
           } else if (snapshot.connectionState == ConnectionState.done) {
-            Future.delayed(const Duration(seconds: 3), () {
+            Future.delayed(const Duration(seconds: 5), () {
               // Navigator.pushReplacementNamed(context, '/welcome');
               Navigator.pushReplacement(
                 context,
