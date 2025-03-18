@@ -1,16 +1,15 @@
 import 'dart:async';
 import 'dart:io';
-
-import 'package:easy_localization/easy_localization.dart';
 import 'dart:typed_data'; // For Uint8List
-import 'dart:io' show File; // For File on mobile
+import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:tlaxcala_world/business_model.dart';
-
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:tlaxcala_world/firebase_methods.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // For uploading files
 
 class AddBusinessScreen extends StatefulWidget {
   const AddBusinessScreen({super.key});
@@ -22,7 +21,7 @@ class AddBusinessScreen extends StatefulWidget {
 class _AddBusinessScreenState extends State<AddBusinessScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
+  // Controllers (unchanged)
   final _nameController = TextEditingController();
   final _reviewController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -45,9 +44,203 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   final bool _isOpen = false;
   String? _selectedBusinessType;
   String? _selectedCategory;
-  final List<String> _imagePaths = []; // For mobile
-  final List<Uint8List> _imageBytes = []; // For web
 
+  // Unified list for media items (URLs as strings, new files as PlatformFile)
+  List<dynamic> _mediaItems = [];
+
+  // Helper functions to identify file types
+  bool isImageExtension(String ext) {
+    return ['jpg', 'jpeg', 'png', 'gif'].contains(ext.toLowerCase());
+  }
+
+  bool isVideoExtension(String ext) {
+    return ['mp4', 'mov', 'avi', 'mkv'].contains(ext.toLowerCase());
+  }
+
+  // Adjusted extension extraction for Firebase Storage URLs
+  String _getExtension(dynamic item) {
+    if (item is String) {
+      // Split by '?' to separate path from query parameters, take the path part
+      String pathPart = item.split('?').first;
+      // Split by '.' and take the last part that looks like an extension
+      List<String> parts = pathPart.split('.');
+      if (parts.length > 1) {
+        return parts.last.toLowerCase();
+      }
+      return '';
+    } else if (item is PlatformFile) {
+      return item.extension?.toLowerCase() ?? '';
+    }
+    return '';
+  }
+
+  // Pick both images and videos
+  Future<void> _pickMedia() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: kIsWeb ? FileType.custom : FileType.media,
+      allowedExtensions: kIsWeb
+          ? ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi', 'mkv']
+          : null,
+    );
+
+    if (result != null) {
+      setState(() {
+        _mediaItems.addAll(result.files);
+      });
+    }
+  }
+
+  // Generate thumbnail for videos
+  Future<Uint8List?> _generateThumbnail(dynamic mediaItem) async {
+    try {
+      if (mediaItem is String) {
+        // Video URL
+        return await VideoThumbnail.thumbnailData(
+          video: mediaItem,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 128,
+          quality: 25,
+        );
+      } else if (mediaItem is PlatformFile && !kIsWeb && mediaItem.path != null) {
+        // New video file
+        return await VideoThumbnail.thumbnailData(
+          video: mediaItem.path!,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 128,
+          quality: 25,
+        );
+      }
+      return null;
+    } catch (e) {
+      print('Error generating thumbnail: $e');
+      return null;
+    }
+  }
+
+  // Build widgets for displaying images and video thumbnails
+  List<Widget> _buildMediaWidgets(BuildContext context) {
+    List<Widget> widgets = [];
+    for (int i = 0; i < _mediaItems.length; i++) {
+      dynamic item = _mediaItems[i];
+      Widget mediaWidget = SizedBox.shrink();
+
+      String extension = _getExtension(item);
+
+      if (isImageExtension(extension)) {
+        if (item is String) {
+          // Existing image URL
+          mediaWidget = Image.network(
+            item,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+          );
+        } else if (item is PlatformFile) {
+          // New image file
+          mediaWidget = kIsWeb
+              ? Image.memory(
+                  item.bytes!,
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                )
+              : Image.file(
+                  File(item.path!),
+                  width: 100,
+                  height: 100,
+                  fit: BoxFit.cover,
+                );
+        }
+      } else if (isVideoExtension(extension)) {
+        mediaWidget = FutureBuilder<Uint8List?>(
+          future: _generateThumbnail(item),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
+              return Stack(
+                children: [
+                  Image.memory(
+                    snapshot.data!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                  
+                ],
+              );
+            } else if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                width: 100,
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            } else {
+              return const SizedBox(
+                width: 100,
+                height: 100,
+                child: Icon(Icons.video_library, size: 50, color: Colors.grey),
+              );
+            }
+          },
+        );
+      } else {
+        mediaWidget = const SizedBox(
+          width: 100,
+          height: 100,
+          child: Icon(Icons.error),
+        );
+      }
+
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: mediaWidget,
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _mediaItems.removeAt(i);
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  // Upload file to Firebase Storage and return URL
+  Future<String?> _uploadFile(PlatformFile file) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString() + '.' + (file.extension ?? '');
+      Reference ref = FirebaseStorage.instance.ref().child('business_images').child(fileName);
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        uploadTask = ref.putData(file.bytes!);
+      } else {
+        uploadTask = ref.putFile(File(file.path!));
+      }
+      TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading file: $e');
+      return null;
+    }
+  }
+
+  // Existing methods (unchanged except where noted)
   void _addNewItem(BuildContext context, String itemType) {
     final TextEditingController controller = TextEditingController();
     showDialog(
@@ -57,8 +250,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
           title: Text(context.tr('Add New') + itemType),
           content: TextField(
             controller: controller,
-            decoration:
-                InputDecoration(hintText: context.tr('Enter') + itemType),
+            decoration: InputDecoration(hintText: context.tr('Enter') + itemType),
           ),
           actions: [
             TextButton(
@@ -72,10 +264,8 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
                     if (itemType == 'Business Type') {
                       businessCategories[controller.text] = [];
                       _selectedBusinessType = controller.text;
-                    } else if (itemType == 'Category' &&
-                        _selectedBusinessType != null) {
-                      businessCategories[_selectedBusinessType]!
-                          .add(controller.text);
+                    } else if (itemType == 'Category' && _selectedBusinessType != null) {
+                      businessCategories[_selectedBusinessType]!.add(controller.text);
                       _selectedCategory = controller.text;
                     }
                   });
@@ -91,8 +281,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   }
 
   Widget _buildStarRating(String review) {
-    int rating = int.tryParse(review) ??
-        0; // Assuming review is stored as a number of stars (1-5)
+    int rating = int.tryParse(review) ?? 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(5, (index) {
@@ -112,29 +301,20 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
     );
   }
 
- 
   Widget buildBusinessTypeDropdown(BuildContext context) {
     return Row(
       children: [
         Expanded(
           child: DropdownButtonFormField<String>(
             value: _selectedBusinessType,
-            decoration:
-                InputDecoration(labelText: context.tr('Type of Business')),
+            decoration: InputDecoration(labelText: context.tr('Type of Business')),
             items: businessCategories.keys
-                .map(
-                  (type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(
-                        context.tr(type)), // Use context.tr for translation
-                  ),
-                )
+                .map((type) => DropdownMenuItem(value: type, child: Text(context.tr(type))))
                 .toList(),
             onChanged: (value) {
               setState(() {
                 _selectedBusinessType = value;
-                _selectedCategory =
-                    null; // Reset category when business type changes
+                _selectedCategory = null;
               });
             },
           ),
@@ -154,16 +334,9 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedCategory,
-                  decoration:
-                      InputDecoration(labelText: context.tr('Category')),
+                  decoration: InputDecoration(labelText: context.tr('Category')),
                   items: businessCategories[_selectedBusinessType]!
-                      .map(
-                        (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(context
-                              .tr(category)), // Use context.tr for translation
-                        ),
-                      )
+                      .map((category) => DropdownMenuItem(value: category, child: Text(context.tr(category))))
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -178,86 +351,17 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
               ),
             ],
           )
-        : const SizedBox(); // Use const for better performance
-  }
-Future<void> _pickImages() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.image,
-    );
-
-    if (result != null) {
-      if (kIsWeb) {
-        // For web, save binary data
-        for (var file in result.files) {
-          if (file.bytes != null) {
-            _imageBytes.add(file.bytes!);
-          }
-        }
-      } else {
-        // For mobile, save file paths
-        for (var file in result.files) {
-          if (file.path != null) {
-            _imagePaths.add(file.path!);
-          }
-        }
-      }
-      setState(() {});
-    }
+        : const SizedBox();
   }
 
-  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<Widget> widgets = [];
-    if (kIsWeb) {
-      // Build widgets for web images
-      for (var bytes in _imageBytes) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: Image.memory(
-                bytes,
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        );
-      }
-    } else {
-      // Build widgets for mobile images
-      for (var path in _imagePaths) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8.0),
-              child: Image.file(
-                File(path),
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        );
-      }
-    }
-    return widgets;
-  }
   Future<void> _selectTime(BuildContext context) async {
     final TimeOfDay? pickedTime = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
     );
-
     if (pickedTime != null) {
-      // Format the selected time as HH:mm
       final formattedTime = pickedTime.format(context);
-      _openingHoursController.text =
-          formattedTime; // Set the formatted time to the controller
+      _openingHoursController.text = formattedTime;
     }
   }
 
@@ -266,41 +370,28 @@ Future<void> _pickImages() async {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-
     if (pickedTime != null) {
-      // Format the selected time as HH:mm
       final formattedTime = pickedTime.format(context);
-      _closingHoursController.text =
-          formattedTime; // Set the formatted time to the controller
+      _closingHoursController.text = formattedTime;
     }
   }
 
   Widget buildOpeningHoursField(BuildContext context) {
     return TextFormField(
       controller: _openingHoursController,
-      readOnly: true, // Prevent manual text entry
-      decoration: InputDecoration(
-        labelText: context.tr('Opening Hours'),
-      ),
-      onTap: () => _selectTime(context), // Show time picker on tap
+      readOnly: true,
+      decoration: InputDecoration(labelText: context.tr('Opening Hours')),
+      onTap: () => _selectTime(context),
     );
   }
 
   Widget buildClosingHoursField(BuildContext context) {
     return TextFormField(
       controller: _closingHoursController,
-      readOnly: true, // Prevent manual text entry
-      decoration: InputDecoration(
-        labelText: context.tr('Closing Hours'),
-      ),
-      onTap: () => _selectClosingTime(context), // Show time picker on tap
+      readOnly: true,
+      decoration: InputDecoration(labelText: context.tr('Closing Hours')),
+      onTap: () => _selectClosingTime(context),
     );
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      _imagePaths.removeAt(index); // Remove an image from the list
-    });
   }
 
   Map<String, List<String>> businessCategories = {
@@ -308,63 +399,39 @@ Future<void> _pickImages() async {
     'Hotels': ['Hotels', 'Motels', 'Ranches'],
     'Restaurants': ['Cafes', 'Restaurants', 'Cusquerias'],
     'Clubs and Bars': ['Clubs', 'Cantabar', 'Cantinas', 'Bars', 'Botanero'],
-    'Sports': [
-      'Soccer',
-      'Basketball',
-      'Tennis',
-      'Archery',
-      'Baseball',
-      'Wrestling',
-      'Gym'
-    ],
+    'Sports': ['Soccer', 'Basketball', 'Tennis', 'Archery', 'Baseball', 'Wrestling', 'Gym'],
     'Art and Culture': ['Crafts', 'Cultural'],
     'Conferences and Exhibitions': ['Sporting', 'Cultural', 'Academic'],
-    'Schools': [
-      'Nursery School',
-      'Kindergarten',
-      'Secondary School',
-      'High School',
-      'University',
-      'Courses'
-    ],
+    'Schools': ['Nursery School', 'Kindergarten', 'Secondary School', 'High School', 'University', 'Courses'],
     'Gyms': ['Yoga', 'Zumba', 'Specialty'],
     'Parties': ['Patron Saints', 'Municipal', 'Private'],
     'Theater': ['Family', 'Children', 'Teenagers', 'Adults'],
     'Events': ['Sports', 'Cultural', 'Art', 'Bullfights', 'Charreadas'],
     'Dances and Concerts': ['Dances', 'Concerts'],
     'Doctors and Hospitals': ['Specialties', 'Hospitals', 'Private Doctors'],
-    'Consultancies': [
-      'Legal',
-      'Entrepreneurship',
-      'Tax and Accounting',
-      'Business'
-    ],
+    'Consultancies': ['Legal', 'Entrepreneurship', 'Tax and Accounting', 'Business'],
     'Beauty': ['Spa', 'Waxing', 'Pedicure', 'Barbershops', 'Nails'],
     'Service': ['Photos and Videos', 'Weddings', 'XV', 'Real Estate'],
     'Newspapers': ['Sports', 'Local', 'National'],
   };
-bool isLocationLinkValid(String link) {
-  try {
-    final regex = RegExp(
-      r'https:\/\/www\.google\.com\/maps\/place\/[^@]+\/@([-.\d]+),([-.\d]+)(?:,\d+z)?'
-    );
-    
-    final match = regex.firstMatch(link);
-    if (match == null) return false;
-    
-    double lat = double.parse(match.group(1)!);
-    double lng = double.parse(match.group(2)!);
-    
-    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-  } catch (e) {
-    print('Error validating link: $e');
-    return false;
+
+  bool isLocationLinkValid(String link) {
+    try {
+      final regex = RegExp(
+          r'https:\/\/www\.google\.com\/maps\/place\/[^@]+\/@([-.\d]+),([-.\d]+)(?:,\d+z)?');
+      final match = regex.firstMatch(link);
+      if (match == null) return false;
+      double lat = double.parse(match.group(1)!);
+      double lng = double.parse(match.group(2)!);
+      return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    } catch (e) {
+      print('Error validating link: $e');
+      return false;
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('Add Business')),
@@ -379,11 +446,8 @@ bool isLocationLinkValid(String link) {
               TextFormField(
                 controller: _nameController,
                 keyboardType: TextInputType.text,
-                decoration:
-                    InputDecoration(labelText: context.tr('Business Name')),
-                validator: (value) => value!.isEmpty
-                    ? context.tr('Please enter a business name')
-                    : null,
+                decoration: InputDecoration(labelText: context.tr('Business Name')),
+                validator: (value) => value!.isEmpty ? context.tr('Please enter a business name') : null,
               ),
               buildBusinessTypeDropdown(context),
               buildCategoryDropdown(context),
@@ -392,8 +456,7 @@ bool isLocationLinkValid(String link) {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration:
-                    InputDecoration(labelText: context.tr('Phone Number')),
+                decoration: InputDecoration(labelText: context.tr('Phone Number')),
               ),
               TextFormField(
                 controller: _addressController,
@@ -405,13 +468,11 @@ bool isLocationLinkValid(String link) {
               ),
               TextFormField(
                 controller: _servicesController,
-                decoration:
-                    InputDecoration(labelText: context.tr('Services Offered')),
+                decoration: InputDecoration(labelText: context.tr('Services Offered')),
               ),
               TextFormField(
                 controller: _addedValueController,
-                decoration:
-                    InputDecoration(labelText: context.tr('Added Value')),
+                decoration: InputDecoration(labelText: context.tr('Added Value')),
               ),
               TextFormField(
                 controller: _opinionsController,
@@ -420,65 +481,45 @@ bool isLocationLinkValid(String link) {
               TextFormField(
                 controller: _facebookPageController,
                 keyboardType: TextInputType.url,
-                decoration: InputDecoration(
-                    labelText: context.tr('Facebook Page Link')),
+                decoration: InputDecoration(labelText: context.tr('Facebook Page Link')),
               ),
               TextFormField(
                 controller: _webPageController,
                 keyboardType: TextInputType.url,
-                decoration:
-                    InputDecoration(labelText: context.tr('Web Page Link')),
+                decoration: InputDecoration(labelText: context.tr('Web Page Link')),
               ),
               TextFormField(
                 controller: _promotionsController,
-                decoration:
-                    InputDecoration(labelText: context.tr('Promotions')),
+                decoration: InputDecoration(labelText: context.tr('Promotions')),
               ),
               TextFormField(
                 controller: _locationLinkController,
                 keyboardType: TextInputType.url,
-                decoration:
-                    InputDecoration(labelText: context.tr('Location Link')),
+                decoration: InputDecoration(labelText: context.tr('Location Link')),
               ),
-             
               TextFormField(
                 controller: _eventDateController,
                 keyboardType: TextInputType.text,
-                decoration: InputDecoration(
-                    labelText: context.tr('Date of Your Event')),
+                decoration: InputDecoration(labelText: context.tr('Date of Your Event')),
               ),
               buildOpeningHoursField(context),
               buildClosingHoursField(context),
-              // buildOpeningHoursField(context),
               TextFormField(
                 controller: _pricesController,
                 decoration: InputDecoration(labelText: context.tr('Prices')),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _pickImages,
-                child: Text(context.tr('Pick Images')),
+                onPressed: _pickMedia,
+                child: Text(context.tr('Pick Media')),
               ),
-              const SizedBox(
-                height: 20,
-              ),
+              const SizedBox(height: 20),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: FutureBuilder<List<Widget>>(
-                  future: _buildImageWidgets(context),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      return const Text('Error loading images');
-                    } else {
-                      return Wrap(
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: snapshot.data ?? [],
-                      );
-                    }
-                  },
+                child: Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _buildMediaWidgets(context),
                 ),
               ),
               const SizedBox(height: 30),
@@ -489,37 +530,58 @@ bool isLocationLinkValid(String link) {
                       setState(() {
                         isLoading = true;
                       });
-                      if(!isLocationLinkValid(_locationLinkController.text.trim())){
-                         showSnackbar(context, context.tr('location link is invalid'));
+                      if (!isLocationLinkValid(_locationLinkController.text.trim())) {
+                        showSnackbar(context, context.tr('location link is invalid'));
+                        setState(() {
+                          isLoading = false;
+                        });
                         return;
                       }
-                      // Save business to database
-                      await saveBusinessData(
-                          Business(
-                            id: '',
-                            imagePaths:kIsWeb?_imageBytes: _imagePaths,
-                            name: _nameController.text.trim(),
-                            businessType: _selectedBusinessType!.trim(),
-                            facebookPage: _facebookPageController.text.trim(),
-                            website: _webPageController.text.trim(),
-                            category: _selectedCategory!.trim(),
-                            review: _reviewController.text.trim(),
-                            phone: _phoneController.text.trim(),
-                            municipal: _municipalController.text.trim(),
-                            address: _addressController.text.trim(),
-                            services: _servicesController.text.trim(),
-                            addedValue: _addedValueController.text.trim(),
-                            opinions: _opinionsController.text.trim(),
-                            whatsapp: _whatsappController.text.trim(),
-                            promotions: _promotionsController.text.trim(),
-                            locationLink: _locationLinkController.text.trim(),
-                            eventDate: _eventDateController.text.trim(),
-                            openingHours: _openingHoursController.text.trim(),
-                            closingHours: _closingHoursController.text.trim(),
-                            prices: _pricesController.text.trim(),
-                          ),
-                          context);
 
+                      // Upload all media files and collect URLs
+                      List<String> imagePaths = [];
+                      List<Future<String?>> uploadFutures = [];
+
+                      for (var item in _mediaItems) {
+                        if (item is String) {
+                          imagePaths.add(item); // Shouldn't happen in AddBusinessScreen, but kept for safety
+                        } else if (item is PlatformFile) {
+                          uploadFutures.add(_uploadFile(item));
+                        }
+                      }
+
+                      List<String?> newUrls = await Future.wait(uploadFutures);
+                      imagePaths.addAll(newUrls.where((url) => url != null).cast<String>());
+
+                      await saveBusinessData(
+                        Business(
+                          id: '',
+                          imagePaths: imagePaths, // Pass list of URLs
+                          name: _nameController.text.trim(),
+                          businessType: _selectedBusinessType!.trim(),
+                          facebookPage: _facebookPageController.text.trim(),
+                          website: _webPageController.text.trim(),
+                          category: _selectedCategory!.trim(),
+                          review: _reviewController.text.trim(),
+                          phone: _phoneController.text.trim(),
+                          municipal: _municipalController.text.trim(),
+                          address: _addressController.text.trim(),
+                          services: _servicesController.text.trim(),
+                          addedValue: _addedValueController.text.trim(),
+                          opinions: _opinionsController.text.trim(),
+                          whatsapp: _whatsappController.text.trim(),
+                          promotions: _promotionsController.text.trim(),
+                          locationLink: _locationLinkController.text.trim(),
+                          eventDate: _eventDateController.text.trim(),
+                          openingHours: _openingHoursController.text.trim(),
+                          closingHours: _closingHoursController.text.trim(),
+                          prices: _pricesController.text.trim(),
+                        ),
+                        context,
+                      );
+                      setState(() {
+                        isLoading = false;
+                      });
                     }
                   },
                   child: isLoading

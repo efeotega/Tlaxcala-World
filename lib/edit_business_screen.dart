@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // For uploading files
 import 'package:tlaxcala_world/feedback/feedback_methods.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
+import 'package:video_thumbnail/video_thumbnail.dart';
 import 'business_model.dart';
 
 class EditBusinessScreen extends StatefulWidget {
@@ -35,43 +37,35 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
   String? _selectedBusinessType;
   String? _selectedCategory;
   late TextEditingController _websiteController;
-  List<String> _imagePaths = []; // For mobile
-  final List<Uint8List> _imageBytes = []; // For web
   late TextEditingController _municipalController;
+  bool isLoading=false;
+
+  // List to hold both existing URLs (strings) and new files (PlatformFile)
+  List<dynamic> _mediaItems = [];
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.business.name);
     _reviewController = TextEditingController(text: widget.business.review);
-    _eventDateController =
-        TextEditingController(text: widget.business.eventDate);
-    _openingHoursController =
-        TextEditingController(text: widget.business.openingHours);
-    _closingHoursController =
-        TextEditingController(text: widget.business.closingHours);
+    _eventDateController = TextEditingController(text: widget.business.eventDate);
+    _openingHoursController = TextEditingController(text: widget.business.openingHours);
+    _closingHoursController = TextEditingController(text: widget.business.closingHours);
     _addressController = TextEditingController(text: widget.business.address);
-    _municipalController =
-        TextEditingController(text: widget.business.municipal);
-    _locationLinkController =
-        TextEditingController(text: widget.business.locationLink);
+    _municipalController = TextEditingController(text: widget.business.municipal);
+    _locationLinkController = TextEditingController(text: widget.business.locationLink);
     _servicesController = TextEditingController(text: widget.business.services);
-    _promotionsController =
-        TextEditingController(text: widget.business.promotions);
-    _facebookController =
-        TextEditingController(text: widget.business.facebookPage);
+    _promotionsController = TextEditingController(text: widget.business.promotions);
+    _facebookController = TextEditingController(text: widget.business.facebookPage);
     _opinionController = TextEditingController(text: widget.business.opinions);
-    _addedValueController =
-        TextEditingController(text: widget.business.addedValue);
+    _addedValueController = TextEditingController(text: widget.business.addedValue);
     _phoneNumberController = TextEditingController(text: widget.business.phone);
     _websiteController = TextEditingController(text: widget.business.website);
     _selectedBusinessType = widget.business.businessType;
     _selectedCategory = widget.business.category;
 
-    // Split the imagePaths string into a list of file paths
-    _imagePaths = widget.business.imagePaths.cast<String>();
-
-    // Check the opening hours for the Open/Close status
+    // Initialize _mediaItems directly from imagePaths
+    _mediaItems = List.from(widget.business.imagePaths);
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -79,12 +73,9 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-
     if (pickedTime != null) {
-      // Format the selected time as HH:mm
       final formattedTime = pickedTime.format(context);
-      _openingHoursController.text =
-          formattedTime; // Set the formatted time to the controller
+      _openingHoursController.text = formattedTime;
     }
   }
 
@@ -93,63 +84,249 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-
     if (pickedTime != null) {
-      // Format the selected time as HH:mm
       final formattedTime = pickedTime.format(context);
-      _closingHoursController.text =
-          formattedTime; // Set the formatted time to the controller
+      _closingHoursController.text = formattedTime;
     }
   }
 
   Widget buildOpeningHoursField(BuildContext context) {
     return TextFormField(
       controller: _openingHoursController,
-      readOnly: true, // Prevent manual text entry
-      decoration: InputDecoration(
-        labelText: context.tr('Opening Hours'),
-      ),
-      onTap: () => _selectTime(context), // Show time picker on tap
+      readOnly: true,
+      decoration: InputDecoration(labelText: context.tr('Opening Hours')),
+      onTap: () => _selectTime(context),
     );
   }
 
   Widget buildClosingHoursField(BuildContext context) {
     return TextFormField(
       controller: _closingHoursController,
-      readOnly: true, // Prevent manual text entry
-      decoration: InputDecoration(
-        labelText: context.tr('Closing Hours'),
-      ),
-      onTap: () => _selectClosingTime(context), // Show time picker on tap
+      readOnly: true,
+      decoration: InputDecoration(labelText: context.tr('Closing Hours')),
+      onTap: () => _selectClosingTime(context),
     );
   }
 
- bool isLocationLinkValid(String link) {
-  try {
-    final regex = RegExp(
-      r'https:\/\/www\.google\.com\/maps\/place\/[^@]+\/@([-.\d]+),([-.\d]+)(?:,\d+z)?'
-    );
-    
-    final match = regex.firstMatch(link);
-    if (match == null) return false;
-    
-    double lat = double.parse(match.group(1)!);
-    double lng = double.parse(match.group(2)!);
-    
-    return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-  } catch (e) {
-    print('Error validating link: $e');
-    return false;
+  bool isLocationLinkValid(String link) {
+    try {
+      final regex = RegExp(
+          r'https:\/\/www\.google\.com\/maps\/place\/[^@]+\/@([-.\d]+),([-.\d]+)(?:,\d+z)?');
+      final match = regex.firstMatch(link);
+      if (match == null) return false;
+      double lat = double.parse(match.group(1)!);
+      double lng = double.parse(match.group(2)!);
+      return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+    } catch (e) {
+      print('Error validating link: $e');
+      return false;
+    }
   }
+
+  Future<void> _pickMedia() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      type: kIsWeb ? FileType.custom : FileType.media,
+      allowedExtensions: kIsWeb
+          ? ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi', 'mkv']
+          : null,
+    );
+
+    if (result != null) {
+      setState(() {
+        _mediaItems.addAll(result.files);
+      });
+    }
+  }
+
+  bool isImageExtension(String ext) {
+    return ['jpg', 'jpeg', 'png', 'gif'].contains(ext.toLowerCase());
+  }
+
+  bool isVideoExtension(String ext) {
+    return ['mp4', 'mov', 'avi', 'mkv'].contains(ext.toLowerCase());
+  }
+
+  /// Generates a thumbnail for a video URL or file path
+  Future<Uint8List?> _generateThumbnail(dynamic mediaItem) async {
+    try {
+      if (mediaItem is String) {
+        // Existing video URL
+        return await VideoThumbnail.thumbnailData(
+          video: mediaItem,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 128,
+          quality: 25,
+        );
+      } else if (mediaItem is PlatformFile && !kIsWeb && mediaItem.path != null) {
+        // New video file
+        return await VideoThumbnail.thumbnailData(
+          video: mediaItem.path!,
+          imageFormat: ImageFormat.JPEG,
+          maxWidth: 128,
+          quality: 25,
+        );
+      }
+      return null;
+    } catch (e) {
+      print('Error generating thumbnail: $e');
+      return null;
+    }
+  }
+
+ String _getExtension(dynamic item) {
+  if (item is String) {
+    // Split by '?' to separate path from query parameters, take the path part
+    String pathPart = item.split('?').first;
+    // Split by '.' and take the last part that looks like an extension
+    List<String> parts = pathPart.split('.');
+    if (parts.length > 1) {
+      return parts.last.toLowerCase();
+    }
+    return '';
+  } else if (item is PlatformFile) {
+    return item.extension?.toLowerCase() ?? '';
+  }
+  return '';
 }
+
+  List<Widget> _buildMediaWidgets(BuildContext context) {
+    List<Widget> widgets = [];
+
+    for (int i = 0; i < _mediaItems.length; i++) {
+      dynamic item = _mediaItems[i];
+      print(item);
+      Widget mediaWidget=SizedBox.shrink();
+
+      String extension = _getExtension(item);
+
+      if (isImageExtension(extension)) {
+        if (item is String) {
+          // Existing image URL
+          mediaWidget = Image.network(
+            item,
+            width: 100,
+            height: 100,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => const Icon(Icons.error),
+          );
+        } else if (item is PlatformFile) {
+          // New image file
+          mediaWidget = kIsWeb
+              ? Image.memory(item.bytes!, width: 100, height: 100, fit: BoxFit.cover)
+              : Image.file(File(item.path!), width: 100, height: 100, fit: BoxFit.cover);
+        }
+      } else if (isVideoExtension(extension)) {
+        mediaWidget = FutureBuilder<Uint8List?>(
+          future: _generateThumbnail(item),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
+              return Stack(
+                children: [
+                  Image.memory(
+                    snapshot.data!,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                  
+                ],
+              );
+            } else if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                width: 100,
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            } else {
+              return const SizedBox(
+                width: 100,
+                height: 100,
+                child: Icon(Icons.video_library, size: 50, color: Colors.grey),
+              );
+            }
+          },
+        );
+      } else {
+        mediaWidget = const SizedBox(
+          width: 100,
+          height: 100,
+          child: Icon(Icons.error),
+        );
+      }
+
+      widgets.add(
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0),
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8.0),
+                child: mediaWidget,
+              ),
+              Positioned(
+                top: 0,
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                  onPressed: () {
+                    setState(() {
+                      _mediaItems.removeAt(i);
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return widgets;
+  }
+
+  /// Uploads a file to Firebase Storage and returns the download URL
+  Future<String?> _uploadFile(PlatformFile file) async {
+    try {
+      String fileName = DateTime.now().millisecondsSinceEpoch.toString() + '.' + (file.extension ?? '');
+      Reference ref = FirebaseStorage.instance.ref().child('business_media').child(fileName);
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        uploadTask = ref.putData(file.bytes!);
+      } else {
+        uploadTask = ref.putFile(File(file.path!));
+      }
+      TaskSnapshot snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+    } catch (e) {
+      print('Error uploading file: $e');
+      return null;
+    }
+  }
+
   Future<void> _saveBusiness() async {
     if (!isLocationLinkValid(_locationLinkController.text.trim())) {
       showSnackbar(context, context.tr('location link is invalid'));
       return;
     }
+    setState(() {
+      isLoading=true;
+    });
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-    // Create the updated business object
+    List<dynamic> updatedImagePaths = [];
+    List<Future<String?>> uploadFutures = [];
+
+    for (var item in _mediaItems) {
+      if (item is String) {
+        updatedImagePaths.add(item);
+      } else if (item is PlatformFile) {
+        uploadFutures.add(_uploadFile(item));
+      }
+    }
+
+    List<String?> newUrls = await Future.wait(uploadFutures);
+    updatedImagePaths.addAll(newUrls.where((url) => url != null).cast<String>());
+
     final updatedBusiness = widget.business.copyWith(
       name: _nameController.text.trim(),
       review: _reviewController.text.trim(),
@@ -163,14 +340,13 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       promotions: _promotionsController.text.trim(),
       facebookPage: _facebookController.text.trim(),
       website: _websiteController.text.trim(),
-      imagePaths: kIsWeb ? _imageBytes : _imagePaths, // Join the image paths
+      imagePaths: updatedImagePaths,
       phone: _phoneNumberController.text.trim(),
       addedValue: _addedValueController.text.trim(),
       opinions: _opinionController.text.trim(),
     );
 
     try {
-      // Assume `businessId` or `documentId` is stored in the `Business` object
       await firestore.collection('businesses').doc(widget.business.id).update({
         'name': updatedBusiness.name,
         'review': updatedBusiness.review,
@@ -190,195 +366,18 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
         'opinions': updatedBusiness.opinions,
       });
 
-      // Show a success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Business Updated Successfully')),
       );
-
-      // Navigate to another page after updating
       Navigator.pushReplacementNamed(context, '/deleteBusiness');
     } catch (e) {
-      // Handle errors gracefully
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update business: $e')),
       );
-    }
-  }
-
-  Future<bool> _isPortrait(String imagePath) async {
-    final completer = Completer<ImageInfo>();
-    final image = Image.network(
-      imagePath,
-      errorBuilder: (context, error, stackTrace) {
-        return Image.file(
-          File(imagePath),
-        );
-      },
-    );
-
-    final ImageStream stream = image.image.resolve(const ImageConfiguration());
-    final listener = ImageStreamListener((ImageInfo info, bool _) {
-      completer.complete(info);
-    });
-
-    stream.addListener(listener);
-    final ImageInfo imageInfo = await completer.future;
-    stream.removeListener(listener);
-
-    return imageInfo.image.width < imageInfo.image.height;
-  }
-
-  Future<void> _pickImages() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: true,
-      type: FileType.image,
-    );
-
-    if (result != null) {
-      if (kIsWeb) {
-        // For web, save binary data
-        _imagePaths.clear();
-        for (var file in result.files) {
-          if (file.bytes != null) {
-            _imageBytes.add(file.bytes!);
-          }
-        }
-      } else {
-        // For mobile, save file paths
-        for (var file in result.files) {
-          if (file.path != null) {
-            _imagePaths.add(file.path!);
-          }
-        }
-      }
-      setState(() {});
-    }
-  }
-
-  Future<List<Widget>> _buildImageWidgets(BuildContext context) async {
-    List<Widget> widgets = [];
-
-    void removeImage(int index, bool isFromBytes) {
       setState(() {
-        if (isFromBytes) {
-          _imageBytes.removeAt(index);
-        } else {
-          _imagePaths.removeAt(index);
-        }
-      });
+      isLoading=false;
+    });
     }
-
-    if (kIsWeb) {
-      // Build widgets for web images
-      if (_imagePaths.isEmpty) {
-        for (int i = 0; i < _imageBytes.length; i++) {
-          final bytes = _imageBytes[i];
-          widgets.add(
-            Stack(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: Image.memory(
-                      bytes,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 4,
-                  right: 4,
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () => removeImage(i, true),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-
-      for (int i = 0; i < _imagePaths.length; i++) {
-        final path = _imagePaths[i];
-        widgets.add(
-          Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Image.network(
-                    path,
-                    width: 100,
-                    height: 100,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.memory(
-                        _imageBytes.isNotEmpty ? _imageBytes[i] : Uint8List(0),
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: () => removeImage(i, false),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    } else {
-      // Build widgets for mobile images
-      for (int i = 0; i < _imagePaths.length; i++) {
-        final path = _imagePaths[i];
-        widgets.add(
-          Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8.0),
-                  child: Image.network(
-                    path,
-                    width: 100,
-                    height: 100,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Image.file(
-                        File(path),
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.red),
-                  onPressed: () => removeImage(i, false),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-
-    return widgets;
   }
 
   Map<String, List<String>> businessCategories = {
@@ -386,37 +385,17 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     'Hotels': ['Hotels', 'Motels', 'Ranches'],
     'Restaurants': ['Cafes', 'Restaurants', 'Cusquerias'],
     'Clubs and Bars': ['Clubs', 'Cantabar', 'Cantinas', 'Bars', 'Botanero'],
-    'Sports': [
-      'Soccer',
-      'Basketball',
-      'Tennis',
-      'Archery',
-      'Baseball',
-      'Wrestling',
-      'Gym'
-    ],
+    'Sports': ['Soccer', 'Basketball', 'Tennis', 'Archery', 'Baseball', 'Wrestling', 'Gym'],
     'Art and Culture': ['Crafts', 'Cultural'],
     'Conferences and Exhibitions': ['Sporting', 'Cultural', 'Academic'],
-    'Schools': [
-      'Nursery School',
-      'Kindergarten',
-      'Secondary School',
-      'High School',
-      'University',
-      'Courses'
-    ],
+    'Schools': ['Nursery School', 'Kindergarten', 'Secondary School', 'High School', 'University', 'Courses'],
     'Gyms': ['Yoga', 'Zumba', 'Specialty'],
     'Parties': ['Patron Saints', 'Municipal', 'Private'],
     'Theater': ['Family', 'Children', 'Teenagers', 'Adults'],
     'Events': ['Sports', 'Cultural', 'Art', 'Bullfights', 'Charreadas'],
     'Dances and Concerts': ['Dances', 'Concerts'],
     'Doctors and Hospitals': ['Specialties', 'Hospitals', 'Private Doctors'],
-    'Consultancies': [
-      'Legal',
-      'Entrepreneurship',
-      'Tax and Accounting',
-      'Business'
-    ],
+    'Consultancies': ['Legal', 'Entrepreneurship', 'Tax and Accounting', 'Business'],
     'Beauty': ['Spa', 'Waxing', 'Pedicure', 'Barbershops', 'Nails'],
     'Service': ['Photos and Videos', 'Weddings', 'XV', 'Real Estate'],
     'Newspapers': ['Sports', 'Local', 'National'],
@@ -428,22 +407,14 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
         Expanded(
           child: DropdownButtonFormField<String>(
             value: _selectedBusinessType,
-            decoration:
-                InputDecoration(labelText: context.tr('Type of Business')),
+            decoration: InputDecoration(labelText: context.tr('Type of Business')),
             items: businessCategories.keys
-                .map(
-                  (type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(
-                        context.tr(type)), // Use context.tr for translation
-                  ),
-                )
+                .map((type) => DropdownMenuItem(value: type, child: Text(context.tr(type))))
                 .toList(),
             onChanged: (value) {
               setState(() {
                 _selectedBusinessType = value;
-                _selectedCategory =
-                    null; // Reset category when business type changes
+                _selectedCategory = null;
               });
             },
           ),
@@ -457,7 +428,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
   }
 
   void _addNewItem(BuildContext context, String itemType) {
-    final TextEditingController controller = TextEditingController();
+    final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -465,8 +436,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
           title: Text(context.tr('Add New') + itemType),
           content: TextField(
             controller: controller,
-            decoration:
-                InputDecoration(hintText: context.tr('Enter') + itemType),
+            decoration: InputDecoration(hintText: context.tr('Enter') + itemType),
           ),
           actions: [
             TextButton(
@@ -480,10 +450,8 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
                     if (itemType == 'Business Type') {
                       businessCategories[controller.text] = [];
                       _selectedBusinessType = controller.text;
-                    } else if (itemType == 'Category' &&
-                        _selectedBusinessType != null) {
-                      businessCategories[_selectedBusinessType]!
-                          .add(controller.text);
+                    } else if (itemType == 'Category' && _selectedBusinessType != null) {
+                      businessCategories[_selectedBusinessType]!.add(controller.text);
                       _selectedCategory = controller.text;
                     }
                   });
@@ -505,16 +473,9 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   value: _selectedCategory,
-                  decoration:
-                      InputDecoration(labelText: context.tr('Category')),
+                  decoration: InputDecoration(labelText: context.tr('Category')),
                   items: businessCategories[_selectedBusinessType]!
-                      .map(
-                        (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(context
-                              .tr(category)), // Use context.tr for translation
-                        ),
-                      )
+                      .map((category) => DropdownMenuItem(value: category, child: Text(context.tr(category))))
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -529,15 +490,13 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               ),
             ],
           )
-        : const SizedBox(); // Use const for better performance
+        : const SizedBox();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.tr('Edit Business')),
-      ),
+      appBar: AppBar(title: Text(context.tr('Edit Business'))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
@@ -547,82 +506,51 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
               _buildTextField(context.tr('Business Name'), _nameController),
               const SizedBox(height: 16),
               buildBusinessTypeDropdown(context),
-              const SizedBox(
-                height: 16,
-              ),
+              const SizedBox(height: 16),
               buildCategoryDropdown(context),
-              const SizedBox(
-                height: 16,
-              ),
+              const SizedBox(height: 16),
               Row(
                 children: [
-                  Text(context.tr('Photos')),
+                  Text(context.tr('Media')),
                   const Spacer(),
                   TextButton(
-                      onPressed: () {
-                        _pickImages();
-                      },
-                      child: Text(context.tr('Change Photos')))
+                    onPressed: _pickMedia,
+                    child: Text(context.tr('Change Media')),
+                  ),
                 ],
               ),
-              const SizedBox(
-                height: 20,
-              ),
+              const SizedBox(height: 20),
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                child: FutureBuilder<List<Widget>>(
-                  future: _buildImageWidgets(context),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      print(snapshot.error);
-                      return const Text('Error loading images');
-                    } else {
-                      return Wrap(
-                        spacing: 8.0,
-                        runSpacing: 8.0,
-                        children: snapshot.data ?? [],
-                      );
-                    }
-                  },
+                child: Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: _buildMediaWidgets(context),
                 ),
               ),
               const SizedBox(height: 16),
               Text(context.tr('Review (Stars)')),
               _buildStarRating(_reviewController.text),
               const SizedBox(height: 16),
-              _buildTextField(
-                  context.tr('Completion Date'), _eventDateController),
+              _buildTextField(context.tr('Completion Date'), _eventDateController),
               const SizedBox(height: 16),
-              // _buildOpenCloseSwitch(),
               buildOpeningHoursField(context),
               buildClosingHoursField(context),
               const SizedBox(height: 16),
               _buildTextField(context.tr('Address'), _addressController),
               _buildTextField(context.tr('Municipal'), _municipalController),
-              _buildTextField(
-                  context.tr('Location Link'), _locationLinkController),
-              _buildTextField(
-                  context.tr('Phone Number'), _phoneNumberController),
+              _buildTextField(context.tr('Location Link'), _locationLinkController),
+              _buildTextField(context.tr('Phone Number'), _phoneNumberController),
               _buildTextField(context.tr('Added Value'), _addedValueController),
               _buildTextField(context.tr('Opinion'), _opinionController),
-              _buildTextField(
-                  context.tr('Services Offered'), _servicesController),
+              _buildTextField(context.tr('Services Offered'), _servicesController),
               _buildTextField(context.tr('Promotions'), _promotionsController),
-              _buildTextField(
-                  context.tr('Facebook Page Link'), _facebookController),
+              _buildTextField(context.tr('Facebook Page Link'), _facebookController),
               _buildTextField(context.tr('Website Link'), _websiteController),
               const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: _saveBusiness,
-                child: Text(context.tr('Save')),
-              ),
+             isLoading?const SizedBox(height: 20,width:20,child: CircularProgressIndicator(),): ElevatedButton(onPressed: _saveBusiness, child: Text(context.tr('Save'))),
               const SizedBox(height: 15),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(context.tr('Cancel')),
-              ),
+              ElevatedButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
             ],
           ),
         ),
@@ -635,25 +563,18 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
+        decoration: InputDecoration(labelText: label, border: const OutlineInputBorder()),
       ),
     );
   }
 
   Widget _buildStarRating(String review) {
-    int rating = int.tryParse(review) ??
-        0; // Assuming review is stored as a number of stars (1-5)
+    int rating = int.tryParse(review) ?? 0;
     return Row(
       mainAxisAlignment: MainAxisAlignment.start,
       children: List.generate(5, (index) {
         return IconButton(
-          icon: Icon(
-            index < rating ? Icons.star : Icons.star_border,
-            color: Colors.yellow,
-          ),
+          icon: Icon(index < rating ? Icons.star : Icons.star_border, color: Colors.yellow),
           onPressed: () {
             setState(() {
               rating = index + 1;

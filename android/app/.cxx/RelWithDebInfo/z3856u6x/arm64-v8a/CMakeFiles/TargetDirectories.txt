@@ -1,0 +1,2 @@
+C:/Dev/tlaxcala_world/android/app/.cxx/RelWithDebInfo/z3856u6x/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Dev/tlaxcala_world/android/app/.cxx/RelWithDebInfo/z3856u6x/arm64-v8a/CMakeFiles/rebuild_cache.dir
