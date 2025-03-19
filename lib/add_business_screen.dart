@@ -46,7 +46,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   String? _selectedCategory;
 
   // Unified list for media items (URLs as strings, new files as PlatformFile)
-  List<dynamic> _mediaItems = [];
+  final List<dynamic> _mediaItems = [];
 
   // Helper functions to identify file types
   bool isImageExtension(String ext) {
@@ -123,7 +123,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
     List<Widget> widgets = [];
     for (int i = 0; i < _mediaItems.length; i++) {
       dynamic item = _mediaItems[i];
-      Widget mediaWidget = SizedBox.shrink();
+      Widget mediaWidget = const SizedBox.shrink();
 
       String extension = _getExtension(item);
 
@@ -224,7 +224,7 @@ class _AddBusinessScreenState extends State<AddBusinessScreen> {
   // Upload file to Firebase Storage and return URL
   Future<String?> _uploadFile(PlatformFile file) async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString() + '.' + (file.extension ?? '');
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}.${file.extension ?? ''}';
       Reference ref = FirebaseStorage.instance.ref().child('business_images').child(fileName);
       UploadTask uploadTask;
       if (kIsWeb) {

@@ -1,5 +1,4 @@
 import 'dart:typed_data'; // For Uint8List
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
@@ -64,9 +63,11 @@ class _DetailsScreenState extends State<DetailsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildImageGallery(context, widget.business),
+                     widget.business.imagePaths.length==0? Row(
+                      mainAxisAlignment:MainAxisAlignment.center,
+                      children:[Icon(Icons.no_photography,color:Colors.grey,size: MediaQuery.of(context).size.width * 9 / 16)]): _buildImageGallery(context, widget.business),
                       _buildHeaderSection(context),
-                      _buildRatingSection(context),
+                      widget.business.review.isEmpty?const SizedBox.shrink():_buildRatingSection(context),
                       _buildContactBar(context),
                       const SizedBox(height: 24),
                       _buildContentText(widget.business.services),
@@ -162,9 +163,9 @@ class _DetailsScreenState extends State<DetailsScreen> {
                           ),
                         ),
                         // Image widget
-                        Image.network(
+                        Container(color:Colors.white,child:Image.network(
                           url,
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           width: double.infinity,
                           loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) {
@@ -178,7 +179,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
                               child: Icon(Icons.error, color: Colors.red, size: 40),
                             );
                           },
-                        ),
+                        ),),
                       ],
                     ),
                   ),

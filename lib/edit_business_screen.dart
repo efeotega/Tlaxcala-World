@@ -196,7 +196,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
     for (int i = 0; i < _mediaItems.length; i++) {
       dynamic item = _mediaItems[i];
       print(item);
-      Widget mediaWidget=SizedBox.shrink();
+      Widget mediaWidget=const SizedBox.shrink();
 
       String extension = _getExtension(item);
 
@@ -287,7 +287,7 @@ class _EditBusinessScreenState extends State<EditBusinessScreen> {
   /// Uploads a file to Firebase Storage and returns the download URL
   Future<String?> _uploadFile(PlatformFile file) async {
     try {
-      String fileName = DateTime.now().millisecondsSinceEpoch.toString() + '.' + (file.extension ?? '');
+      String fileName = '${DateTime.now().millisecondsSinceEpoch}.${file.extension ?? ''}';
       Reference ref = FirebaseStorage.instance.ref().child('business_media').child(fileName);
       UploadTask uploadTask;
       if (kIsWeb) {

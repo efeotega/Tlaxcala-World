@@ -167,28 +167,31 @@ Widget _buildMediaWidget(String url) {
           ),
         ),
         // Image widget
-        Image.network(
-          url,
-          fit: BoxFit.cover,
-          loadingBuilder: (context, child, loadingProgress) {
-            if (loadingProgress == null) {
-              // Image is fully loaded, show the image
-              return child;
-            } else {
-              // While loading, the shimmer effect is visible in the background
-              return const SizedBox.shrink(); // Empty widget, shimmer shows through
-            }
-          },
-          errorBuilder: (context, error, stackTrace) {
-            // Fallback if the image fails to load
-            return Container(
-              color: Colors.grey[200],
-              child: const Center(
-                child: Icon(Icons.image_not_supported, color: Colors.grey),
-              ),
-            );
-          },
+       Container(
+  color: Colors.white, // Background color for empty space
+  child: Image.network(
+    url,
+    fit: BoxFit.contain,
+    loadingBuilder: (context, child, loadingProgress) {
+      if (loadingProgress == null) {
+        // Image is fully loaded, show the image
+        return child;
+      } else {
+        // While loading, the shimmer effect is visible in the background
+        return const SizedBox.shrink(); // Empty widget, shimmer shows through
+      }
+    },
+    errorBuilder: (context, error, stackTrace) {
+      // Fallback if the image fails to load
+      return Container(
+        color: Colors.grey[200],
+        child: const Center(
+          child: Icon(Icons.image_not_supported, color: Colors.grey),
         ),
+      );
+    },
+  ),
+),
       ],
     );
   } else if (videoExtensions.contains(extension)) {
@@ -358,7 +361,7 @@ Widget _buildMediaWidget(String url) {
                           itemCount: _filteredBusinesses.length,
                           itemBuilder: (context, index) {
                             final business = _filteredBusinesses[index];
-                            Widget mediaWidget=SizedBox.shrink();
+                            Widget mediaWidget=const SizedBox.shrink();
                             if (business.imagePaths.isNotEmpty) {
                              // print(business.imagePaths.first);
                               mediaWidget = _buildMediaWidget(business.imagePaths.first);
